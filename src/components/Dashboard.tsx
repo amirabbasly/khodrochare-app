@@ -1,0 +1,464 @@
+"use client";
+
+import { useEffect, useState, type FormEvent, type ReactNode } from "react";
+import { useRouter } from "next/navigation";
+import { BrandLogo, Icon } from "@/components/Icons";
+import { MiniCar, PromoArtwork } from "@/components/Artwork";
+import { ServiceIllustration, type ServiceId } from "@/components/ServiceIllustration";
+
+type View =
+  | "home"
+  | "wallet"
+  | "history"
+  | "market"
+  | "hall"
+  | "profile"
+  | "mycars"
+  | "addresses"
+  | "invite"
+  | "support"
+  | "notifications"
+  | "service";
+
+type UserSession = { name?: string; username?: string; wallet?: string };
+type Service = { id: ServiceId; name: string; note: string; category: string };
+
+const services: Service[] = [
+  { id: "roadside", name: "امداد خودرو", note: "همیشه در راه", category: "امداد" },
+  { id: "transport", name: "حمل خودرو", note: "امن و مطمئن", category: "امداد" },
+  { id: "maintenance", name: "سرویس دوره‌ای خودرو", note: "سرویس و نگهداری", category: "سرویس" },
+  { id: "carwash", name: "کارواش سیار", note: "در محل شما", category: "سرویس" },
+  { id: "diagnostic", name: "عیب‌یابی هوشمند", note: "دیاگ با موبایل", category: "هوشمند" },
+  { id: "insurance", name: "خدمات بیمه", note: "بیمهٔ خودرو", category: "خودرو" },
+  { id: "fines", name: "پرداخت جرائم", note: "استعلام و پرداخت", category: "خودرو" },
+  { id: "tolls", name: "عوارض و خلافی خودرو", note: "پرداخت یک‌جا", category: "خودرو" },
+  { id: "license", name: "نمرهٔ گواهینامه", note: "وضعیت رانندگی", category: "خودرو" },
+  { id: "reminder", name: "یادآور سرویس خودرو", note: "هیچ‌چیز یادت نره", category: "سرویس" },
+  { id: "tripcheck", name: "چک خودرو قبل سفر", note: "با خیال راحت برو", category: "سرویس" },
+  { id: "expert", name: "ارتباط با کارشناس", note: "پاسخ تخصصی", category: "پشتیبانی" },
+  { id: "inspection", name: "کارشناسی خودرو", note: "خرید مطمئن‌تر", category: "خودرو" },
+];
+
+const drawerItems: { label: string; view: View; icon: "wallet" | "history" | "market" | "auction" | "user" | "car" | "pin" | "gift" | "support" }[] = [
+  { label: "کیف پول", view: "wallet", icon: "wallet" },
+  { label: "تاریخچه درخواست‌ها", view: "history", icon: "history" },
+  { label: "جمعه‌بازار لوازم یدکی", view: "market", icon: "market" },
+  { label: "تالار فروش خودرو", view: "hall", icon: "auction" },
+  { label: "حساب کاربری", view: "profile", icon: "user" },
+  { label: "خودروهای من", view: "mycars", icon: "car" },
+  { label: "آدرس‌های من", view: "addresses", icon: "pin" },
+  { label: "دعوت از دوستان", view: "invite", icon: "gift" },
+  { label: "تماس با پشتیبانی", view: "support", icon: "support" },
+];
+
+const topPromos = [
+  { title: "اولین جمعه‌بازار لوازم یدکی ایران", description: "تا ۱۰۰٪ تخفیف روی قطعات منتخب؛ جمعه‌ها، پر از چاره!", type: "parts", theme: "parts", tag: "جمعه‌بازار" },
+  { title: "اولین تالار تخصصی فروش و مزایده خودرو ایران", description: "خودروی بعدی‌ات را با خیال راحت پیدا کن.", type: "auction", theme: "auction", tag: "تالار خودرو" },
+  { title: "اولین اپلیکیشن جامع خدمات خودرویی در ایران", description: "یک خانه برای تمام نیازهای خودروی تو.", type: "app", theme: "app", tag: "خودرو چاره" },
+];
+
+const bottomPromos = [
+  { title: "پوشش کامل تهران، کرج و کل شمال کشور", description: "هرجا که باشی، چاره نزدیک توست.", type: "coverage", theme: "coverage", tag: "پوشش گسترده" },
+  { title: "کارشناسی تخصصی خودرو تا فروش", description: "از بررسی دقیق تا پیدا کردن خریدار، همراهت هستیم.", type: "inspection", theme: "inspection", tag: "خرید مطمئن" },
+  { title: "ماشینتو با گوشی تو دستت دیاگ بزن", description: "عیب‌یابی هوشمند؛ ساده، سریع و همیشه در دسترس.", type: "diagnostic", theme: "diagnostic", tag: "دیاگ هوشمند" },
+];
+
+const bottomItems: { label: string; view: View; icon: "home" | "market" | "auction" | "user" }[] = [
+  { label: "خانه", view: "home", icon: "home" },
+  { label: "جمعه‌بازار", view: "market", icon: "market" },
+  { label: "تالار خودرو", view: "hall", icon: "auction" },
+  { label: "پروفایل", view: "profile", icon: "user" },
+];
+
+function latinDigits(value: string) {
+  return value.replace(/[۰-۹]/g, (digit) => String("۰۱۲۳۴۵۶۷۸۹".indexOf(digit))).replace(/[٬،,\s]/g, "");
+}
+
+function formatMoney(value: number) {
+  return `${Math.max(0, value).toLocaleString("fa-IR")} تومان`;
+}
+
+function PageTitle({ title, subtitle, onBack, action }: { title: string; subtitle?: string; onBack: () => void; action?: ReactNode }) {
+  return (
+    <div className="page-title-row">
+      <div className="page-title-main">
+        <button className="back-button" type="button" onClick={onBack} aria-label="بازگشت به صفحهٔ قبل"><Icon name="arrow-right" size={19} /></button>
+        <div><h1>{title}</h1>{subtitle && <p>{subtitle}</p>}</div>
+      </div>
+      {action && <div className="page-title-action">{action}</div>}
+    </div>
+  );
+}
+
+function SectionTitle({ title, caption, action }: { title: string; caption?: string; action?: ReactNode }) {
+  return (
+    <div className="section-title-row">
+      <div><h2>{title}</h2>{caption && <p>{caption}</p>}</div>
+      {action}
+    </div>
+  );
+}
+
+function Avatar({ name, large = false }: { name: string; large?: boolean }) {
+  const initials = name.trim().split(/\s+/).slice(0, 2).map((part) => part[0]).join("") || "ک";
+  return <span className={`user-avatar${large ? " user-avatar--large" : ""}`} aria-hidden="true">{initials}</span>;
+}
+
+function PromoSlider({ items, onAction }: { items: typeof topPromos; onAction: (index: number) => void }) {
+  const [current, setCurrent] = useState(0);
+  const item = items[current];
+  function shift(amount: number) {
+    setCurrent((index) => (index + amount + items.length) % items.length);
+  }
+  return (
+    <article className={`promo-slider promo-slider--${item.theme}`}>
+      <div className="promo-slider-content">
+        <div className="promo-copy">
+          <span className="promo-tag"><span />{item.tag}</span>
+          <h3>{item.title}</h3>
+          <p>{item.description}</p>
+          <button className="promo-link" type="button" onClick={() => onAction(current)}>بیشتر ببین <Icon name="arrow-left" size={16} /></button>
+        </div>
+        <div className="promo-visual"><PromoArtwork type={item.type} /></div>
+      </div>
+      <div className="promo-controls">
+        <div className="promo-dots" aria-label={`اسلاید ${current + 1} از ${items.length}`}>
+          {items.map((promo, index) => <button key={promo.type} type="button" className={`promo-dot${index === current ? " is-active" : ""}`} aria-label={`نمایش اسلاید ${index + 1}`} onClick={() => setCurrent(index)} />)}
+        </div>
+        <div className="promo-arrows">
+          <button type="button" onClick={() => shift(-1)} aria-label="اسلاید قبلی"><Icon name="arrow-right" size={15} /></button>
+          <button type="button" onClick={() => shift(1)} aria-label="اسلاید بعدی"><Icon name="arrow-left" size={15} /></button>
+        </div>
+      </div>
+    </article>
+  );
+}
+
+function ServiceCard({ service, onClick }: { service: Service; onClick: () => void }) {
+  return (
+    <button className={`service-card service-card--${service.id}`} type="button" onClick={onClick}>
+      <ServiceIllustration type={service.id} />
+      <span className="service-name">{service.name}</span>
+      <span className="service-note">{service.note}</span>
+    </button>
+  );
+}
+
+function HomeView({ onService, onNavigate, onToast, userName }: { onService: (service: Service) => void; onNavigate: (view: View) => void; onToast: (message: string) => void; userName: string }) {
+  return (
+    <div className="home-content">
+      <div className="home-greeting-row">
+        <div><span className="home-eyebrow">امروز، وقتِ رسیدگی به ماشینته</span><h1>سلام {userName.split(" ")[0]} <span>✦</span></h1><p>هر چیزی برای خودروت لازم داری، از همین‌جا شروع کن.</p></div>
+        <button className="location-chip" type="button" onClick={() => onToast("موقعیت فعلی شما: تهران، ایران")}><span className="location-chip-icon"><Icon name="pin" size={16} /></span><span><small>موقعیت شما</small><strong>تهران، ایران</strong></span><Icon name="chevron" size={15} /></button>
+      </div>
+
+      <section className="home-hero">
+        <div className="home-hero-copy">
+          <span className="hero-label"><span className="hero-label-dot" />همه‌چیز برای ماشینت، یک‌جا</span>
+          <h2>راه بیفت، <em>چاره</em> با ماست.</h2>
+          <p>با خدمات قابل‌اعتماد خودرو چاره، هر مسیر آسوده‌تر از قبل است.</p>
+          <div className="hero-buttons"><button className="hero-primary" type="button" onClick={() => onService(services[0])}>درخواست امداد <Icon name="arrow-left" size={17} /></button><button className="hero-secondary" type="button" onClick={() => document.getElementById("services")?.scrollIntoView({ behavior: "smooth" })}>دیدن خدمات</button></div>
+          <div className="hero-trust"><span><i />پشتیبانی ۲۴ ساعته</span><span><i />متخصص‌های تأییدشده</span></div>
+        </div>
+        <div className="home-hero-art"><div className="hero-orbit hero-orbit--one" /><div className="hero-orbit hero-orbit--two" /><span className="hero-art-badge"><Icon name="shield" size={16} /> آرامش در هر مسیر</span><svg viewBox="0 0 520 300" className="hero-car-art" fill="none" aria-hidden="true"><ellipse cx="283" cy="251" rx="196" ry="20" fill="#07131D" opacity=".3"/><circle cx="340" cy="156" r="118" fill="#FF8A36" opacity=".13"/><circle cx="340" cy="156" r="83" stroke="#FFB17D" strokeOpacity=".2"/><circle cx="340" cy="156" r="60" stroke="#FFB17D" strokeOpacity=".18"/><path d="m92 192 22-48c9-20 26-32 47-36l56-10 57-49c12-10 27-15 43-15h45c14 0 28 7 37 18l49 59 30 12c13 5 22 17 25 31l5 38c2 15-9 27-24 27H102c-14 0-17-13-10-27Z" fill="url(#home-car-body)" stroke="#E3EAF1" strokeWidth="2"/><path d="m177 104 53-9 54-46c10-8 21-12 34-12h38c10 0 19 5 26 13l43 54H177Z" fill="#182B3A" stroke="#AEBECA" strokeOpacity=".8" strokeWidth="2"/><path d="m236 96 52-48m8-11v59m19-59 3 59" stroke="#8297A8" strokeOpacity=".55" strokeWidth="2"/><path d="m107 183 13-31h47l-12 40h-52m361-40 29 10 4 27h-31l-2-37Z" fill="#FFD8C3"/><path d="m107 183 13-31h47l-12 40h-52m361-40 29 10 4 27h-31l-2-37Z" stroke="#F5AE7F" strokeWidth="2"/><path d="M185 194h225" stroke="#233C4E" strokeWidth="2" strokeLinecap="round"/><path d="m105 200 22 4m322-5 31-2" stroke="#FF7929" strokeWidth="4" strokeLinecap="round"/><circle cx="176" cy="205" r="38" fill="#0D1822" stroke="#9EADB9" strokeWidth="3"/><circle cx="176" cy="205" r="23" fill="#253B4D" stroke="#E8EDF1" strokeWidth="2"/><circle cx="176" cy="205" r="7" fill="#FF7929"/><path d="m176 183 3 14m18 8-14 3m-7 20-3-14m-18-8 14-3m18-8-10 10m-20 20 10-10m20 1-10-10m-20-20 10 10" stroke="#C4D0D9" strokeWidth="2" strokeLinecap="round"/><circle cx="418" cy="205" r="38" fill="#0D1822" stroke="#9EADB9" strokeWidth="3"/><circle cx="418" cy="205" r="23" fill="#253B4D" stroke="#E8EDF1" strokeWidth="2"/><circle cx="418" cy="205" r="7" fill="#FF7929"/><path d="m418 183 3 14m18 8-14 3m-7 20-3-14m-18-8 14-3m18-8-10 10m-20 20 10-10m20 1-10-10m-20-20 10 10" stroke="#C4D0D9" strokeWidth="2" strokeLinecap="round"/><path d="m377 40 6-13 6 13 13 6-13 6-6 13-6-13-13-6 13-6Z" fill="#FF9A52"/><path d="m96 94 4-8 4 8 8 4-8 4-4 8-4-8-8-4 8-4Z" fill="#EAF3FC" opacity=".72"/><defs><linearGradient id="home-car-body" x1="110" y1="115" x2="496" y2="216" gradientUnits="userSpaceOnUse"><stop stopColor="#FBFCFD"/><stop offset=".46" stopColor="#B9C7D1"/><stop offset="1" stopColor="#778B9A"/></linearGradient></defs></svg></div>
+      </section>
+
+      <section className="vehicle-strip">
+        <div className="vehicle-strip-icon"><Icon name="car" size={23} /></div>
+        <div className="vehicle-strip-info"><span>خودروی انتخاب‌شده</span><strong>پژو ۲۰۷ پانوراما <small>· مدل ۱۴۰۱</small></strong></div>
+        <div className="vehicle-mileage"><span className="vehicle-health-dot" /><span>وضعیت خودرو <b>خوب</b></span></div>
+        <button className="vehicle-change" type="button" onClick={() => onNavigate("mycars")}>تغییر خودرو <Icon name="chevron" size={15} /></button>
+      </section>
+
+      <section className="services-section" id="services">
+        <SectionTitle title="خدمات خودرویی" caption="هر نیازی، فقط با چند لمس فاصله دارد." action={<span className="service-count">۱۳ خدمت <span>✦</span></span>} />
+        <div className="services-grid">{services.map((service) => <ServiceCard key={service.id} service={service} onClick={() => onService(service)} />)}</div>
+      </section>
+
+      <section className="promo-section">
+        <SectionTitle title="چاره‌های بیشتر برای ماشینت" caption="دنیایی از انتخاب‌های تازه، مخصوص تو." />
+        <div className="promo-grid">
+          <PromoSlider items={topPromos} onAction={(index) => onNavigate(index === 0 ? "market" : "hall")} />
+          <PromoSlider items={bottomPromos} onAction={(index) => index === 2 ? onService(services[4]) : onService(services[12])} />
+        </div>
+      </section>
+
+      <section className="home-shortcuts">
+        <button className="shortcut-card shortcut-market" type="button" onClick={() => onNavigate("market")}><span className="shortcut-art"><Icon name="tag" size={24} /></span><span><strong>جمعه‌بازار قطعات</strong><small>قطعهٔ خوب، قیمت خوب</small></span><Icon name="arrow-left" size={17} /></button>
+        <button className="shortcut-card shortcut-hall" type="button" onClick={() => onNavigate("hall")}><span className="shortcut-art"><Icon name="auction" size={24} /></span><span><strong>تالار فروش خودرو</strong><small>خرید و فروش با اطمینان</small></span><Icon name="arrow-left" size={17} /></button>
+      </section>
+      <p className="home-footnote"><Icon name="shield" size={14} /> خودرو چاره، همراه مطمئن تو در مسیرهای زندگی.</p>
+    </div>
+  );
+}
+
+function WalletView({ balance, onAdd, onBack }: { balance: number; onAdd: (amount: number) => void; onBack: () => void }) {
+  const [amount, setAmount] = useState("");
+  function submit(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    const parsed = Number(latinDigits(amount));
+    if (parsed < 10000) return;
+    onAdd(parsed);
+    setAmount("");
+  }
+  return <div className="subpage"><PageTitle title="کیف پول" subtitle="پرداخت سریع‌تر و بی‌دردسرتر خدمات خودرو" onBack={onBack} />
+    <div className="wallet-layout">
+      <section className="wallet-card"><div className="wallet-card-top"><span className="wallet-emblem"><Icon name="wallet" size={23} /></span><span className="wallet-secure"><Icon name="shield" size={14} /> کیف پول امن خودرو چاره</span></div><span className="wallet-label">موجودی قابل استفاده</span><strong className="wallet-balance">{formatMoney(balance)}</strong><span className="wallet-card-foot">موجودی شما همیشه در دسترس است.</span><div className="wallet-card-orbit" /></section>
+      <section className="panel-card topup-card"><span className="panel-eyebrow">افزایش موجودی</span><h2>کیف پولت را شارژ کن</h2><p>مبلغ دلخواهت را وارد کن و ادامه بده.</p><form className="topup-form" onSubmit={submit}><label className="form-field"><span className="field-label">مبلغ شارژ (تومان)</span><span className="field-control"><input type="text" inputMode="numeric" value={amount} onChange={(event) => setAmount(event.target.value)} placeholder="مثلاً ۵۰۰٬۰۰۰" required dir="rtl" /></span></label><button type="submit" className="primary-button">ادامه به پرداخت <Icon name="arrow-left" size={17} /></button></form></section>
+    </div>
+    <section className="panel-card list-panel"><SectionTitle title="تراکنش‌های اخیر" caption="آخرین تغییرات کیف پول شما" /><div className="transaction-row"><span className="transaction-icon transaction-icon--green"><Icon name="plus" size={18} /></span><span className="transaction-info"><strong>شارژ کیف پول</strong><small>امروز · ۱۰:۴۲</small></span><b className="money-positive">+ ۵۰۰٬۰۰۰ تومان</b></div><div className="transaction-row"><span className="transaction-icon"><Icon name="car" size={18} /></span><span className="transaction-info"><strong>سرویس دوره‌ای خودرو</strong><small>۲۴ مهر · ۱۶:۲۰</small></span><b>− ۸۵۰٬۰۰۰ تومان</b></div></section>
+  </div>;
+}
+
+function HistoryView({ onBack }: { onBack: () => void }) {
+  const [filter, setFilter] = useState("همه");
+  const rows = [
+    { title: "تعویض روغن و فیلتر", date: "۲۴ مهر ۱۴۰۴ · ۱۰:۳۰", status: "در انتظار", kind: "سرویس دوره‌ای", icon: "maintenance" as ServiceId },
+    { title: "کارواش سیار", date: "۱۸ مهر ۱۴۰۴ · ۱۴:۰۰", status: "انجام‌شده", kind: "کارواش", icon: "carwash" as ServiceId },
+    { title: "استعلام خلافی", date: "۱۲ مهر ۱۴۰۴ · ۰۹:۱۲", status: "انجام‌شده", kind: "خودرو", icon: "fines" as ServiceId },
+  ];
+  const filteredRows = filter === "همه" ? rows : rows.filter((row) => row.status === filter);
+  return <div className="subpage"><PageTitle title="تاریخچهٔ درخواست‌ها" subtitle="همهٔ سرویس‌ها و پیگیری‌های تو اینجاست." onBack={onBack} /><div className="filter-tabs">{["همه", "در انتظار", "انجام‌شده"].map((item) => <button type="button" key={item} className={filter === item ? "is-active" : ""} onClick={() => setFilter(item)}>{item}</button>)}</div><section className="panel-card history-list">{filteredRows.map((row) => <article className="history-row" key={row.title}><ServiceIllustration type={row.icon} /><div className="history-details"><span>{row.kind}</span><strong>{row.title}</strong><small><Icon name="calendar" size={13} />{row.date}</small></div><span className={`status-pill${row.status === "انجام‌شده" ? " status-pill--done" : ""}`}><i />{row.status}</span><button className="row-more" type="button" aria-label="گزینه‌ها"><Icon name="more" size={20} /></button></article>)}</section><div className="history-note"><Icon name="sparkles" size={18} /><span>با ثبت درخواست جدید، جزئیات آن همین‌جا نمایش داده می‌شود.</span></div></div>;
+}
+
+function MarketView({ onBack, onToast }: { onBack: () => void; onToast: (message: string) => void }) {
+  const [category, setCategory] = useState("همهٔ قطعات");
+  const categories = ["همهٔ قطعات", "لوازم مصرفی", "قطعات فنی", "تجهیزات جانبی"];
+  const products = [
+    { name: "روغن موتور 5W-30", detail: "مناسب خودروهای داخلی · ۴ لیتر", price: "۱٬۸۹۰٬۰۰۰", badge: "تخفیف ۲۰٪", tone: "oil" },
+    { name: "باتری ۶۰ آمپر", detail: "۱۸ ماه ضمانت تعویض", price: "۳٬۷۵۰٬۰۰۰", badge: "پرفروش", tone: "battery" },
+    { name: "لاستیک چهارفصل", detail: "سایز ۱۸۵/۶۵ · جفت", price: "۵٬۴۰۰٬۰۰۰", badge: "ارسال رایگان", tone: "tire" },
+  ];
+  return <div className="subpage"><PageTitle title="جمعه‌بازار لوازم یدکی" subtitle="بازار قطعات مطمئن، با قیمت‌های به‌صرفه." onBack={onBack} action={<button className="icon-outline-button" type="button" onClick={() => onToast("فهرست علاقه‌مندی‌ها در نسخهٔ نمایشی") } aria-label="علاقه‌مندی‌ها"><Icon name="gift" size={18} /></button>} />
+    <section className="market-hero"><span className="market-hero-label"><Icon name="tag" size={15} /> هر جمعه، یک فرصت تازه</span><h2>قطعهٔ خوب پیدا کن،<br /><em>هوشمندانه خرید کن.</em></h2><p>فروشنده‌های تأییدشده، پیشنهادهای ویژه و خرید با خیال راحت.</p><button type="button" onClick={() => onToast("به‌زودی جمعه‌بازار کامل‌تر می‌شود")}>دیدن پیشنهادهای ویژه <Icon name="arrow-left" size={16} /></button><div className="market-wheel"><span /><i /></div></section>
+    <div className="market-toolbar"><div className="search-field"><Icon name="search" size={19} /><input placeholder="دنبال چه قطعه‌ای می‌گردی؟" aria-label="جست‌وجوی قطعه" /></div><button className="filter-button" type="button" onClick={() => onToast("فیلترهای بیشتر به‌زودی اضافه می‌شوند")}><Icon name="filter" size={17} /> فیلترها</button></div>
+    <div className="category-tabs">{categories.map((item) => <button key={item} type="button" className={category === item ? "is-active" : ""} onClick={() => setCategory(item)}>{item}</button>)}</div>
+    <SectionTitle title="پیشنهادهای جمعه" caption="محصول‌های منتخب فروشندگان خودرو چاره" action={<button className="text-link" type="button" onClick={() => onToast("همهٔ محصولات در نسخهٔ کامل نمایش داده می‌شوند")}>مشاهده همه <Icon name="arrow-left" size={14} /></button>} />
+    <div className="product-grid">{products.map((product) => <article className="product-card" key={product.name}><div className={`product-visual product-visual--${product.tone}`}><span className="product-badge">{product.badge}</span>{product.tone === "tire" ? <span className="product-tire" /> : product.tone === "battery" ? <span className="product-battery"><i /><b>+  −</b></span> : <span className="product-oil"><i /></span>}<button type="button" className="product-heart" aria-label="افزودن به علاقه‌مندی‌ها" onClick={() => onToast("به فهرست علاقه‌مندی‌ها اضافه شد")}><Icon name="gift" size={15} /></button></div><div className="product-info"><span className="product-category">{category === "همهٔ قطعات" ? "قطعات منتخب" : category}</span><h3>{product.name}</h3><p>{product.detail}</p><div className="product-bottom"><strong>{product.price} <small>تومان</small></strong><button type="button" onClick={() => onToast(`${product.name} به سبد خرید اضافه شد`)} aria-label="افزودن به سبد خرید"><Icon name="plus" size={17} /></button></div></div></article>)}</div>
+  </div>;
+}
+
+function HallView({ onBack, onToast }: { onBack: () => void; onToast: (message: string) => void }) {
+  const cars = [
+    { name: "پژو ۲۰۷ پانوراما", year: "۱۴۰۱", km: "۳۸٬۰۰۰", price: "۹۸۰٬۰۰۰٬۰۰۰", variant: "silver" as const, city: "تهران" },
+    { name: "دنا پلاس توربو", year: "۱۴۰۲", km: "۲۱٬۵۰۰", price: "۱٬۲۴۰٬۰۰۰٬۰۰۰", variant: "blue" as const, city: "کرج" },
+    { name: "تارا اتوماتیک", year: "۱۴۰۳", km: "۱۲٬۰۰۰", price: "۱٬۵۵۰٬۰۰۰٬۰۰۰", variant: "orange" as const, city: "تهران" },
+  ];
+  return <div className="subpage"><PageTitle title="تالار فروش خودرو" subtitle="جای مطمئن خرید و فروش خودروهای کارشناسی‌شده." onBack={onBack} action={<button className="primary-button compact-button" type="button" onClick={() => onToast("فرم ثبت خودرو به‌زودی در دسترس است")}><Icon name="plus" size={16} /> ثبت خودروی من</button>} />
+    <section className="hall-banner"><span className="hall-banner-mark"><Icon name="shield" size={24} /></span><div><span>خرید و فروش با اطمینان</span><h2>خودروی بعدی‌ات را اینجا پیدا کن.</h2><p>آگهی‌های بررسی‌شده، قیمت شفاف و همراهی کارشناسان.</p></div><div className="hall-banner-stats"><strong>+۲,۴۰۰</strong><small>خودروی آمادهٔ معامله</small></div></section>
+    <div className="market-toolbar"><div className="search-field"><Icon name="search" size={19} /><input placeholder="مدل یا برند خودرو را جست‌وجو کن" aria-label="جست‌وجوی خودرو" /></div><button className="filter-button" type="button" onClick={() => onToast("فیلترهای خودرو باز شد")}><Icon name="filter" size={17} /> فیلترها</button></div>
+    <div className="listing-heading"><SectionTitle title="خودروهای پیشنهادی" caption="انتخاب‌های تازه و کارشناسی‌شده" /><button className="sort-button" type="button" onClick={() => onToast("مرتب‌سازی بر اساس تازه‌ترین آگهی‌ها")}>جدیدترین <Icon name="chevron" size={15} /></button></div>
+    <div className="car-listing-grid">{cars.map((car, index) => <article className="car-listing-card" key={car.name}><div className={`listing-car-visual listing-car-visual--${car.variant}`}><span className="listing-tag">{index === 0 ? "کارشناسی‌شده" : "آگهی ویژه"}</span><MiniCar variant={car.variant} /><button className="product-heart" type="button" aria-label="ذخیرهٔ آگهی" onClick={() => onToast("آگهی به علاقه‌مندی‌ها اضافه شد")}><Icon name="gift" size={15} /></button></div><div className="listing-info"><div className="listing-title-line"><h3>{car.name}</h3><span>{car.year}</span></div><div className="listing-specs"><span><Icon name="car" size={14} />{car.km} کیلومتر</span><span><Icon name="pin" size={14} />{car.city}</span></div><div className="listing-price-line"><strong>{car.price} <small>تومان</small></strong><button type="button" onClick={() => onToast(`جزئیات ${car.name} در تالار خودرو`)} aria-label="مشاهده جزئیات"><Icon name="arrow-left" size={16} /></button></div></div></article>)}</div>
+  </div>;
+}
+
+function ProfileView({ name, username, onSave, onBack, onToast }: { name: string; username: string; onSave: (name: string) => void; onBack: () => void; onToast: (message: string) => void }) {
+  const [fullName, setFullName] = useState(name);
+  const [phone, setPhone] = useState("۰۹۱۲ ۳۴۵ ۶۷۸۹");
+  const [email, setEmail] = useState("");
+  return <div className="subpage"><PageTitle title="حساب کاربری" subtitle="اطلاعات و تنظیمات حساب خودت را مدیریت کن." onBack={onBack} />
+    <div className="profile-layout"><section className="panel-card profile-summary"><div className="profile-cover"><span className="profile-cover-orbit" /></div><Avatar name={name} large /><h2>{name}</h2><p dir="ltr">@{username || "arman"}</p><span className="profile-member"><Icon name="shield" size={14} />عضو خودرو چاره</span><div className="profile-stats"><span><b>۰۳</b><small>درخواست</small></span><span><b>۰۱</b><small>خودرو</small></span><span><b>۰۲</b><small>نشان</small></span></div></section>
+      <section className="panel-card profile-edit"><div className="panel-heading"><span className="profile-edit-icon"><Icon name="user" size={20} /></span><div><h2>اطلاعات شخصی</h2><p>اطلاعاتت را به‌روز نگه دار.</p></div></div><form className="profile-form" onSubmit={(event) => { event.preventDefault(); onSave(fullName.trim()); onToast("اطلاعات کاربری ذخیره شد"); }}><label className="form-field"><span className="field-label">نام و نام خانوادگی</span><span className="field-control"><input value={fullName} onChange={(event) => setFullName(event.target.value)} required /></span></label><label className="form-field"><span className="field-label">نام کاربری</span><span className="field-control field-control--ltr"><input value={username || "arman"} readOnly dir="ltr" /></span></label><label className="form-field"><span className="field-label">شمارهٔ موبایل</span><span className="field-control"><input value={phone} onChange={(event) => setPhone(event.target.value)} dir="ltr" /></span></label><label className="form-field"><span className="field-label">ایمیل (اختیاری)</span><span className="field-control field-control--ltr"><input type="email" placeholder="name@example.com" value={email} onChange={(event) => setEmail(event.target.value)} dir="ltr" /></span></label><button className="primary-button" type="submit">ذخیرهٔ تغییرات <Icon name="arrow-left" size={16} /></button></form></section></div>
+    <section className="panel-card settings-list"><button type="button" onClick={() => onToast("تنظیمات امنیتی در نسخهٔ کامل فعال می‌شود")}><span className="settings-icon"><Icon name="shield" size={18} /></span><span><strong>امنیت و حریم خصوصی</strong><small>رمز عبور و تنظیمات ورود</small></span><Icon name="chevron" size={17} /></button><button type="button" onClick={() => onToast("تنظیمات اعلان‌ها باز شد")}><span className="settings-icon"><Icon name="bell" size={18} /></span><span><strong>تنظیمات اعلان‌ها</strong><small>مدیریت پیام‌ها و یادآورها</small></span><Icon name="chevron" size={17} /></button></section>
+  </div>;
+}
+
+function MyCarsView({ onBack, onToast }: { onBack: () => void; onToast: (message: string) => void }) {
+  const [cars, setCars] = useState(["پژو ۲۰۷ پانوراما · ۱۴۰۱", "پراید ۱۳۱ · ۱۳۹۸"]);
+  const [adding, setAdding] = useState(false);
+  const [newCar, setNewCar] = useState("");
+  function addCar(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    if (!newCar.trim()) return;
+    setCars((items) => [...items, newCar.trim()]); setNewCar(""); setAdding(false); onToast("خودروی جدید به فهرستت اضافه شد");
+  }
+  return <div className="subpage"><PageTitle title="خودروهای من" subtitle="خودروهایت را اضافه کن تا خدمات دقیق‌تری بگیری." onBack={onBack} action={<button className="primary-button compact-button" type="button" onClick={() => setAdding((current) => !current)}><Icon name="plus" size={16} /> افزودن خودرو</button>} />
+    {adding && <form className="add-inline-form" onSubmit={addCar}><input autoFocus placeholder="مثلاً تارا اتوماتیک · ۱۴۰۲" value={newCar} onChange={(event) => setNewCar(event.target.value)} required /><button className="primary-button compact-button" type="submit">ثبت خودرو</button></form>}
+    <div className="my-cars-grid">{cars.map((car, index) => <article className="my-car-card" key={`${car}-${index}`}><div className={`my-car-visual ${index % 2 ? "my-car-visual--blue" : ""}`}><span className="car-plate">ایران <b>۴۶</b> · <b>ک ۵۲۱</b></span><MiniCar variant={index % 2 ? "blue" : "silver"} /></div><div className="my-car-info"><span className="car-primary-label">خودروی اصلی{index === 0 ? "" : ""}</span><h2>{car}</h2><div className="my-car-meta"><span><Icon name="shield" size={14} />بیمهٔ شخص ثالث: ۱۲۰ روز</span><span><Icon name="clock" size={14} />سرویس بعدی: ۴۵ روز</span></div><div className="my-car-actions"><button type="button" className="car-action-main" onClick={() => onToast(`خودروی ${car} انتخاب شد`)}>انتخاب خودرو <Icon name="arrow-left" size={15} /></button><button type="button" className="icon-outline-button" onClick={() => onToast("ویرایش خودرو در نسخهٔ کامل فعال می‌شود")} aria-label="ویرایش"><Icon name="edit" size={17} /></button></div></div></article>)}</div>
+    <button type="button" className="add-car-dashed" onClick={() => setAdding(true)}><span><Icon name="plus" size={22} /></span><strong>خودروی دیگری اضافه کن</strong><small>با اضافه کردن خودرو، پیشنهادهای بهتری بگیر.</small></button>
+  </div>;
+}
+
+function AddressesView({ onBack, onToast }: { onBack: () => void; onToast: (message: string) => void }) {
+  const [addresses, setAddresses] = useState([{ title: "خانه", address: "تهران، سعادت‌آباد، خیابان سرو غربی، پلاک ۲۴", label: "پیش‌فرض" }, { title: "محل کار", address: "تهران، ونک، خیابان گاندی، پلاک ۸", label: "" }]);
+  const [showForm, setShowForm] = useState(false);
+  const [newAddress, setNewAddress] = useState("");
+  function addAddress(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault(); if (!newAddress.trim()) return;
+    setAddresses((items) => [...items, { title: "آدرس جدید", address: newAddress.trim(), label: "" }]); setNewAddress(""); setShowForm(false); onToast("آدرس جدید ذخیره شد");
+  }
+  return <div className="subpage"><PageTitle title="آدرس‌های من" subtitle="مقصدهای پرتکرارت را ذخیره کن." onBack={onBack} action={<button className="primary-button compact-button" type="button" onClick={() => setShowForm((current) => !current)}><Icon name="plus" size={16} /> افزودن آدرس</button>} />
+    {showForm && <form className="add-inline-form" onSubmit={addAddress}><input autoFocus placeholder="آدرس کامل را وارد کن" value={newAddress} onChange={(event) => setNewAddress(event.target.value)} required /><button className="primary-button compact-button" type="submit">ذخیرهٔ آدرس</button></form>}
+    <div className="address-grid">{addresses.map((item, index) => <article className="panel-card address-card" key={`${item.title}-${index}`}><div className="address-card-top"><span className="address-icon"><Icon name="pin" size={20} /></span>{item.label && <span className="default-address">{item.label}</span>}<button className="row-more" type="button" aria-label="ویرایش آدرس" onClick={() => onToast("ویرایش آدرس در نسخهٔ کامل فعال می‌شود")}><Icon name="more" size={20} /></button></div><h2>{item.title}</h2><p>{item.address}</p><div className="address-card-footer"><span><Icon name="location" size={14} /> محدودهٔ تهران</span><button type="button" onClick={() => onToast("این آدرس انتخاب شد")}>انتخاب آدرس <Icon name="arrow-left" size={14} /></button></div></article>)}</div>
+  </div>;
+}
+
+function InviteView({ onBack, onToast }: { onBack: () => void; onToast: (message: string) => void }) {
+  async function copyCode() {
+    try { await navigator.clipboard.writeText("CHAREH-ARMAN"); onToast("کد دعوت کپی شد"); } catch { onToast("کد دعوت شما: CHAREH-ARMAN"); }
+  }
+  return <div className="subpage"><PageTitle title="دعوت از دوستان" subtitle="با هم، مسیرها آسوده‌تر می‌شوند." onBack={onBack} />
+    <section className="invite-hero"><div className="invite-text"><span className="invite-eyebrow"><Icon name="gift" size={15} /> هدیه‌ای برای تو و دوستت</span><h2>دوستت را دعوت کن،<br /><em>چاره را شریک شو!</em></h2><p>با هر دعوت موفق، شما و دوستت از هدیه‌های ویژهٔ خودرو چاره بهره‌مند می‌شوید.</p><div className="invite-code"><span><small>کد دعوت اختصاصی تو</small><b dir="ltr">CHAREH-ARMAN</b></span><button type="button" onClick={copyCode}><Icon name="tag" size={17} /> کپی کد</button></div><button className="invite-share" type="button" onClick={() => onToast("لینک دعوت برای اشتراک‌گذاری آماده شد")}><Icon name="send" size={17} /> دعوت از دوستان</button></div><div className="invite-art"><span className="invite-art-circle"><Icon name="gift" size={74} /></span><span className="invite-spark invite-spark--one">✦</span><span className="invite-spark invite-spark--two">✳</span><span className="invite-confetti" /></div></section>
+    <div className="invite-steps"><div><b>۰۱</b><strong>کدت را بفرست</strong><small>کد دعوت را با دوستت به اشتراک بگذار.</small></div><div><b>۰۲</b><strong>دوستت ثبت‌نام کند</strong><small>دوستت با کد تو وارد خودرو چاره می‌شود.</small></div><div><b>۰۳</b><strong>هدیه‌تان را بگیرید</strong><small>پاداش برای هر دوی شما فعال می‌شود.</small></div></div>
+  </div>;
+}
+
+function SupportView({ onBack, onToast }: { onBack: () => void; onToast: (message: string) => void }) {
+  const [message, setMessage] = useState("");
+  return <div className="subpage"><PageTitle title="تماس با پشتیبانی" subtitle="هر سؤالی داری، ما با خوشحالی پاسخ می‌دهیم." onBack={onBack} />
+    <section className="support-hero"><span className="support-orbit"><Icon name="support" size={32} /></span><div><span>همیشه کنار تو</span><h2>چطور می‌توانیم کمکت کنیم؟</h2><p>پاسخ‌گویی هر روز، از ساعت ۸ صبح تا ۱۲ شب.</p></div><button type="button" onClick={() => onToast("تماس با پشتیبانی: ۰۲۱-۹۱۰۰-۱۲۰۰")}><Icon name="phone" size={17} /> تماس با ما</button></section>
+    <div className="support-columns"><section className="panel-card faq-panel"><SectionTitle title="سؤال‌های پرتکرار" caption="شاید پاسخ سؤالت اینجا باشد." /><details><summary>چطور درخواست خدمات ثبت کنم؟ <span>+</span></summary><p>از صفحهٔ خانه خدمت موردنیاز را انتخاب کن، خودروی موردنظر و آدرس را وارد کن و درخواستت را ثبت کن.</p></details><details><summary>چطور خودروی جدید اضافه کنم؟ <span>+</span></summary><p>از منوی اپلیکیشن وارد «خودروهای من» شو و گزینهٔ افزودن خودرو را انتخاب کن.</p></details><details><summary>هزینهٔ خدمات را کجا ببینم؟ <span>+</span></summary><p>هزینهٔ نهایی پیش از تأیید درخواست به تو نمایش داده می‌شود.</p></details></section>
+      <section className="panel-card support-message"><div className="support-message-icon"><Icon name="chat" size={22} /></div><h2>پیامت را برای ما بفرست</h2><p>کارشناسان ما در کوتاه‌ترین زمان پاسخ می‌دهند.</p><form onSubmit={(event) => { event.preventDefault(); if (!message.trim()) return; setMessage(""); onToast("پیامت برای پشتیبانی ارسال شد"); }}><textarea value={message} onChange={(event) => setMessage(event.target.value)} placeholder="پیامت را اینجا بنویس…" required /><button className="primary-button" type="submit">ارسال پیام <Icon name="arrow-left" size={16} /></button></form></section></div>
+  </div>;
+}
+
+function NotificationsView({ onBack, onToast }: { onBack: () => void; onToast: (message: string) => void }) {
+  const notices = [
+    { title: "سرویس دوره‌ای خودروت نزدیکه", description: "فقط ۳ روز تا یادآور سرویس بعدی پژو ۲۰۷ باقی مانده.", time: "امروز · ۰۹:۳۰", icon: "maintenance" as ServiceId, unread: true },
+    { title: "جمعه‌بازار این هفته شروع شد", description: "پیشنهادهای ویژهٔ قطعات را از دست نده.", time: "دیروز · ۱۷:۰۰", icon: "fines" as ServiceId, unread: true },
+    { title: "حساب کاربری‌ات آماده است", description: "خوش آمدی به خانوادهٔ خودرو چاره!", time: "۲۴ مهر · ۱۲:۱۵", icon: "insurance" as ServiceId, unread: false },
+  ];
+  return <div className="subpage"><PageTitle title="اعلان‌ها" subtitle="خبرهای تازه و یادآورهای خودروی تو." onBack={onBack} action={<button className="text-link" type="button" onClick={() => onToast("همهٔ اعلان‌ها خوانده شدند")}>خواندن همه</button>} /><section className="panel-card notification-list">{notices.map((notice) => <article className={`notification-row${notice.unread ? " is-unread" : ""}`} key={notice.title}><ServiceIllustration type={notice.icon} /><div><strong>{notice.title}</strong><p>{notice.description}</p><small><Icon name="clock" size={13} />{notice.time}</small></div>{notice.unread && <i className="notification-unread" />}</article>)}</section></div>;
+}
+
+function ServiceView({ service, onBack, onToast }: { service: Service; onBack: () => void; onToast: (message: string) => void }) {
+  const [car, setCar] = useState("پژو ۲۰۷ پانوراما · ۱۴۰۱");
+  const [address, setAddress] = useState("خانه · سعادت‌آباد، تهران");
+  const [date, setDate] = useState("");
+  function submit(event: FormEvent<HTMLFormElement>) { event.preventDefault(); onToast(`درخواست «${service.name}» ثبت شد؛ به‌زودی با شما تماس می‌گیریم.`); }
+  return <div className="subpage"><PageTitle title={service.name} subtitle={`ثبت درخواست ${service.name} با چند قدم ساده`} onBack={onBack} />
+    <div className="service-detail-layout"><section className={`service-detail-intro service-detail-intro--${service.id}`}><div className="service-detail-art"><ServiceIllustration type={service.id} /></div><span className="detail-label">خدمت هوشمند خودرو چاره</span><h2>{service.name}<br /><em>درست همین‌جا.</em></h2><p>سرویس موردنیازت را ثبت کن تا متخصصان تأییدشدهٔ خودرو چاره در کنارت باشند.</p><div className="detail-benefits"><span><Icon name="shield" size={15} />کارشناس تأییدشده</span><span><Icon name="clock" size={15} />پاسخ‌گویی سریع</span><span><Icon name="check" size={15} />قیمت شفاف</span></div></section>
+      <section className="panel-card service-request-card"><div className="request-heading"><span>درخواست خدمت</span><h2>چند قدم تا آرامش</h2><p>اطلاعات را کامل کن؛ ما ادامهٔ مسیر را می‌سازیم.</p></div><form className="service-request-form" onSubmit={submit}><label className="form-field"><span className="field-label">خودرو</span><span className="field-control"><select value={car} onChange={(event) => setCar(event.target.value)}><option>پژو ۲۰۷ پانوراما · ۱۴۰۱</option><option>پراید ۱۳۱ · ۱۳۹۸</option><option>سایر خودروها</option></select><Icon name="chevron" size={15} /></span></label><label className="form-field"><span className="field-label">آدرس دریافت خدمت</span><span className="field-control"><select value={address} onChange={(event) => setAddress(event.target.value)}><option>خانه · سعادت‌آباد، تهران</option><option>محل کار · ونک، تهران</option><option>آدرس دیگر</option></select><Icon name="chevron" size={15} /></span></label><label className="form-field"><span className="field-label">زمان پیشنهادی</span><span className="field-control"><input type="datetime-local" value={date} onChange={(event) => setDate(event.target.value)} /></span></label><label className="form-field"><span className="field-label">توضیحات (اختیاری)</span><span className="field-control"><input placeholder="اگر نکته‌ای هست، برایمان بنویس…" /></span></label><div className="request-footnote"><Icon name="shield" size={15} />قیمت نهایی پیش از تأیید با شما هماهنگ می‌شود.</div><button className="primary-button request-submit" type="submit">ثبت درخواست خدمت <Icon name="arrow-left" size={17} /></button></form></section></div>
+  </div>;
+}
+
+function AIChat({ open, setOpen }: { open: boolean; setOpen: (open: boolean) => void }) {
+  const [text, setText] = useState("");
+  const [messages, setMessages] = useState([{ from: "bot", text: "سلام! من چاره‌یارم. برای چه چیزی دربارهٔ ماشینت کمکت کنم؟" }]);
+  function send(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault(); if (!text.trim()) return;
+    const question = text.trim(); setMessages((items) => [...items, { from: "user", text: question }, { from: "bot", text: "حتماً! برای راهنمایی دقیق‌تر، از بخش خدمات یک گزینه انتخاب کن یا موضوعت را با کارشناس خودرو چاره در میان بگذار." }]); setText("");
+  }
+  return <>
+    {open && <section className="chat-window" aria-label="گفت‌وگو با چاره‌یار"><div className="chat-header"><span className="chat-avatar"><span>AI</span></span><div><strong>چاره‌یار</strong><small><i />همراه هوشمند تو</small></div><button type="button" onClick={() => setOpen(false)} aria-label="بستن گفت‌وگو"><Icon name="close" size={19} /></button></div><div className="chat-messages">{messages.map((message, index) => <p key={`${message.from}-${index}`} className={`chat-bubble${message.from === "user" ? " chat-bubble--user" : ""}`}>{message.text}</p>)}</div><form className="chat-input-row" onSubmit={send}><input value={text} onChange={(event) => setText(event.target.value)} placeholder="پیامت را بنویس…" aria-label="پیام شما" /><button type="submit" aria-label="ارسال پیام"><Icon name="send" size={17} /></button></form><div className="chat-demo-note">پاسخ‌گوی آزمایشی خودرو چاره</div></section>}
+    <button className={`ai-fab${open ? " ai-fab--open" : ""}`} type="button" onClick={() => setOpen(!open)} aria-label={open ? "بستن چاره‌یار" : "گفت‌وگو با هوش مصنوعی"}><span className="ai-fab-stars"><i>✦</i><b>AI</b></span><span className="ai-fab-copy">چاره‌یار <small>پشتیبانی هوشمند</small></span>{open ? <Icon name="close" size={18} /> : <span className="ai-fab-spark">✦</span>}</button>
+  </>;
+}
+
+export default function Dashboard() {
+  const router = useRouter();
+  const [view, setView] = useState<View>("home");
+  const [selectedService, setSelectedService] = useState<Service>(services[0]);
+  const [drawerOpen, setDrawerOpen] = useState(false);
+  const [chatOpen, setChatOpen] = useState(false);
+  const [toast, setToast] = useState("");
+  const [userName, setUserName] = useState("آرمان رضایی");
+  const [username, setUsername] = useState("arman");
+  const [balance, setBalance] = useState(1250000);
+
+  useEffect(() => {
+    const refreshProfile = () => {
+      try {
+        const stored = localStorage.getItem("khodrochare_session_v1") || sessionStorage.getItem("khodrochare_session_v1");
+        if (!stored) return;
+        const user = JSON.parse(stored) as UserSession;
+        if (user.name) setUserName(user.name);
+        if (user.username) setUsername(user.username);
+        if (user.wallet !== undefined) {
+          const value = Number(latinDigits(user.wallet));
+          if (!Number.isNaN(value)) setBalance(value);
+        }
+      } catch {
+        // Keep the demo profile if browser storage is unavailable.
+      }
+    };
+    const timer = window.setTimeout(refreshProfile, 0);
+    return () => window.clearTimeout(timer);
+  }, []);
+
+  function notify(message: string) {
+    setToast(message);
+    window.setTimeout(() => setToast(""), 3400);
+  }
+
+  function navigate(next: View) {
+    setView(next);
+    setDrawerOpen(false);
+    setToast("");
+    window.scrollTo({ top: 0, behavior: "smooth" });
+  }
+
+  function openService(service: Service) {
+    setSelectedService(service);
+    navigate("service");
+  }
+
+  function addBalance(amount: number) {
+    const next = balance + amount;
+    setBalance(next);
+    try {
+      const session = JSON.parse(localStorage.getItem("khodrochare_session_v1") || sessionStorage.getItem("khodrochare_session_v1") || "{}");
+      session.wallet = next.toLocaleString("fa-IR");
+      localStorage.setItem("khodrochare_session_v1", JSON.stringify(session));
+    } catch { /* Local-only prototype. */ }
+    notify("کیف پول شما با موفقیت شارژ شد.");
+  }
+
+  function saveProfile(nextName: string) {
+    if (nextName) setUserName(nextName);
+    try {
+      const session = JSON.parse(localStorage.getItem("khodrochare_session_v1") || sessionStorage.getItem("khodrochare_session_v1") || "{}");
+      session.name = nextName;
+      localStorage.setItem("khodrochare_session_v1", JSON.stringify(session));
+    } catch { /* Local-only prototype. */ }
+  }
+
+  function logout() {
+    localStorage.removeItem("khodrochare_session_v1");
+    sessionStorage.removeItem("khodrochare_session_v1");
+    setDrawerOpen(false);
+    router.push("/");
+  }
+
+  let content: ReactNode;
+  switch (view) {
+    case "home": content = <HomeView userName={userName} onService={openService} onNavigate={navigate} onToast={notify} />; break;
+    case "wallet": content = <WalletView balance={balance} onAdd={addBalance} onBack={() => navigate("home")} />; break;
+    case "history": content = <HistoryView onBack={() => navigate("home")} />; break;
+    case "market": content = <MarketView onBack={() => navigate("home")} onToast={notify} />; break;
+    case "hall": content = <HallView onBack={() => navigate("home")} onToast={notify} />; break;
+    case "profile": content = <ProfileView name={userName} username={username} onSave={saveProfile} onBack={() => navigate("home")} onToast={notify} />; break;
+    case "mycars": content = <MyCarsView onBack={() => navigate("home")} onToast={notify} />; break;
+    case "addresses": content = <AddressesView onBack={() => navigate("home")} onToast={notify} />; break;
+    case "invite": content = <InviteView onBack={() => navigate("home")} onToast={notify} />; break;
+    case "support": content = <SupportView onBack={() => navigate("home")} onToast={notify} />; break;
+    case "notifications": content = <NotificationsView onBack={() => navigate("home")} onToast={notify} />; break;
+    case "service": content = <ServiceView service={selectedService} onBack={() => navigate("home")} onToast={notify} />; break;
+    default: content = <HomeView userName={userName} onService={openService} onNavigate={navigate} onToast={notify} />;
+  }
+
+  return (
+    <div className="app-frame" dir="rtl">
+      <header className="app-header">
+        <div className="app-header-inner">
+          <div className="header-menu-wrap"><button className={`menu-button${drawerOpen ? " menu-button--active" : ""}`} type="button" onClick={() => setDrawerOpen(true)} aria-label="باز کردن منو"><span /><span /><span /></button><span className="menu-word">منو</span></div>
+          <button className="header-brand-button" type="button" onClick={() => navigate("home")} aria-label="بازگشت به خانه"><BrandLogo compact /></button>
+          <div className="header-meta"><button className="header-profile-chip" type="button" onClick={() => navigate("profile")}><Avatar name={userName} /><span className="header-profile-text"><strong>{userName}</strong><small>کیف پول <b>{balance.toLocaleString("fa-IR")}</b></small></span></button><button className="notification-button" type="button" onClick={() => navigate("notifications")} aria-label="اعلان‌ها"><Icon name="bell" size={20} /><i /></button></div>
+        </div>
+      </header>
+
+      <main className={`app-main${view === "home" ? " app-main--home" : ""}`} key={view}>{content}</main>
+
+      <nav className="bottom-nav" aria-label="ناوبری اصلی">{bottomItems.map((item) => <button className={`bottom-nav-item${view === item.view || (item.view === "market" && view === "market") || (item.view === "hall" && view === "hall") || (item.view === "profile" && view === "profile") ? " is-active" : ""}`} key={item.view} type="button" onClick={() => navigate(item.view)} aria-current={view === item.view ? "page" : undefined}><span className="bottom-nav-icon"><Icon name={item.icon} size={21} /></span><span>{item.label}</span></button>)}</nav>
+
+      <div className={`drawer-backdrop${drawerOpen ? " is-visible" : ""}`} onClick={() => setDrawerOpen(false)} aria-hidden="true" />
+      <aside className={`app-drawer${drawerOpen ? " is-open" : ""}`} aria-label="منوی اصلی" aria-hidden={!drawerOpen}>
+        <div className="drawer-header"><div className="drawer-user"><Avatar name={userName} large /><div><strong>{userName}</strong><span>خودروچاره‌ای عزیز</span><small><Icon name="wallet" size={13} /> موجودی کیف پول <b>{balance.toLocaleString("fa-IR")} تومان</b></small></div></div><button type="button" className="drawer-close" onClick={() => setDrawerOpen(false)} aria-label="بستن منو"><Icon name="close" size={18} /></button><div className="drawer-header-glow" /></div>
+        <div className="drawer-content"><span className="drawer-section-label">خدمات و حساب من</span><nav className="drawer-nav">{drawerItems.map((item) => <button type="button" key={item.view} onClick={() => navigate(item.view)} className={view === item.view ? "is-current" : ""}><span className="drawer-nav-icon"><Icon name={item.icon} size={18} /></span><span>{item.label}</span><Icon name="chevron" size={15} className="drawer-arrow" /></button>)}</nav><button className="drawer-logout" type="button" onClick={logout}><span><Icon name="logout" size={18} /></span>خروج</button><div className="drawer-footer"><BrandLogo compact /><span>نسخهٔ نمایشی · ۱.۰.۰</span></div></div>
+      </aside>
+
+      <AIChat open={chatOpen} setOpen={setChatOpen} />
+      {toast && <div className="toast-message" role="status"><span><Icon name="check" size={17} /></span>{toast}<button type="button" onClick={() => setToast("")} aria-label="بستن پیام"><Icon name="close" size={15} /></button></div>}
+    </div>
+  );
+}
