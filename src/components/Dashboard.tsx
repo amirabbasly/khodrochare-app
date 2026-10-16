@@ -4,7 +4,7 @@ import Image from "next/image";
 import { useEffect, useState, type FormEvent, type ReactNode } from "react";
 import { useRouter } from "next/navigation";
 import { BrandLogo, Icon } from "@/components/Icons";
-import { AiMascot, MiniCar } from "@/components/Artwork";
+import { AiMascot, MiniCar, ServicesScene3D } from "@/components/Artwork";
 import { MoreDots3D, ServiceIllustration, type ServiceId } from "@/components/ServiceIllustration";
 
 type View =
@@ -270,7 +270,7 @@ function HomeView({
 
       <section className="bento-stats" aria-label="خلاصه وضعیت خودرو و خدمات">
         <button className="bento-main" type="button" onClick={() => onNavigate("history")}>
-          <Image src="/slides/hero-roadside.jpg" alt="" fill sizes="(max-width: 900px) 100vw, 62vw" className="bento-main-image" />
+          <span className="bento-main-scene"><ServicesScene3D /></span>
           <span className="bento-main-veil" aria-hidden="true" />
           <span className="bento-chip bento-chip--one" aria-hidden="true"><Icon name="clock" size={12} /> در حال انجام</span>
           <span className="bento-chip bento-chip--two" aria-hidden="true"><Icon name="pin" size={12} /> ۲.۴ کیلومتری شما</span>
@@ -481,7 +481,7 @@ function AIChat({ open, setOpen }: { open: boolean; setOpen: (open: boolean) => 
   }
   return <>
     {open && <section className="chat-window" aria-label="گفت‌وگو با چاره‌یار"><div className="chat-header"><span className="chat-avatar"><span>AI</span></span><div><strong>چاره‌یار</strong><small><i />همراه هوشمند تو</small></div><button type="button" onClick={() => setOpen(false)} aria-label="بستن گفت‌وگو"><Icon name="close" size={19} /></button></div><div className="chat-messages">{messages.map((message, index) => <p key={`${message.from}-${index}`} className={`chat-bubble${message.from === "user" ? " chat-bubble--user" : ""}`}>{message.text}</p>)}</div><form className="chat-input-row" onSubmit={send}><input value={text} onChange={(event) => setText(event.target.value)} placeholder="پیامت را بنویس…" aria-label="پیام شما" /><button type="submit" aria-label="ارسال پیام"><Icon name="send" size={17} /></button></form><div className="chat-demo-note">همراه هوشمند خودرو چاره</div></section>}
-    <button className={`ai-fab${open ? " ai-fab--open" : ""}`} type="button" onClick={() => setOpen(!open)} aria-label={open ? "بستن چاره‌یار" : "گفت‌وگو با هوش مصنوعی"}><span className="ai-fab-mascot"><AiMascot /></span><span className="ai-fab-copy">چاره‌یار <small>پشتیبانی هوشمند</small></span>{open ? <Icon name="close" size={18} /> : <span className="ai-fab-spark"><Icon name="sparkles" size={16} /></span>}</button>
+    <button className={`ai-fab${open ? " ai-fab--open" : ""}`} type="button" onClick={() => setOpen(!open)} aria-label={open ? "بستن چاره‌یار" : "گفت‌وگو با هوش مصنوعی"}><span className="ai-fab-mascot"><AiMascot /></span><span className="ai-fab-copy">چاره‌یار <small>پشتیبانی هوشمند</small></span>{open && <Icon name="close" size={18} />}</button>
   </>;
 }
 

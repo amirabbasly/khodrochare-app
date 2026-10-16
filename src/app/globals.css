@@ -1106,7 +1106,10 @@ a {
   border: 1px solid rgba(255, 255, 255, 0.08);
   border-radius: 24px;
   color: #fff;
-  background: var(--navy);
+  background:
+    radial-gradient(ellipse at 18% 88%, rgba(249, 112, 35, 0.2), transparent 46%),
+    radial-gradient(ellipse at 80% 10%, rgba(101, 150, 174, 0.22), transparent 44%),
+    linear-gradient(116deg, #122936 4%, #1b3948 58%, #132c3a 100%);
   box-shadow: 0 16px 34px rgba(24, 48, 63, 0.12);
   text-align: right;
   transition: transform 200ms ease, box-shadow 200ms ease;
@@ -1117,22 +1120,122 @@ a {
   box-shadow: 0 22px 44px rgba(24, 48, 63, 0.17);
 }
 
-.bento-main-image {
-  object-fit: cover;
-  object-position: 18% 68%;
-  transition: transform 600ms ease;
+.bento-main-scene {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: 0;
+  z-index: 1;
+  width: 58%;
+  display: grid;
+  place-items: center;
+  transition: transform 500ms ease;
+  pointer-events: none;
 }
 
-.bento-main:hover .bento-main-image {
-  transform: scale(1.045);
+.services-scene {
+  width: 100%;
+  height: 100%;
+  overflow: visible;
+}
+
+.bento-main:hover .bento-main-scene {
+  transform: scale(1.035);
 }
 
 .bento-main-veil {
   position: absolute;
   inset: 0;
-  background:
-    linear-gradient(275deg, rgba(10, 26, 38, 0.92) 12%, rgba(10, 26, 38, 0.55) 52%, rgba(10, 26, 38, 0.1) 82%),
-    linear-gradient(0deg, rgba(10, 26, 38, 0.34), transparent 45%);
+  z-index: 1;
+  background: linear-gradient(275deg, rgba(10, 26, 38, 0.58) 20%, rgba(10, 26, 38, 0.12) 52%, rgba(10, 26, 38, 0) 74%);
+  pointer-events: none;
+}
+
+/* 3D animated services scene */
+.scene-car {
+  transform-origin: center;
+  transform-box: fill-box;
+  animation: scene-bob 5s ease-in-out infinite;
+}
+
+@keyframes scene-bob {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-5px); }
+}
+
+.scene-orb {
+  transform-origin: center;
+  transform-box: fill-box;
+  animation: scene-float 5.2s ease-in-out infinite;
+}
+
+.scene-orb--buy { animation-delay: 0.3s; }
+.scene-orb--insurance { animation-delay: 0.7s; }
+.scene-orb--parts { animation-delay: 1.1s; }
+.scene-orb--roadside { animation-delay: 1.5s; }
+
+@keyframes scene-float {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-8px); }
+}
+
+.scene-gear {
+  transform-origin: center;
+  transform-box: fill-box;
+  animation: scene-gear-spin 16s linear infinite;
+}
+
+@keyframes scene-gear-spin {
+  to { transform: rotate(360deg); }
+}
+
+.scene-link {
+  animation: scene-dash 2.6s linear infinite;
+}
+
+.scene-ring {
+  animation: scene-dash 7s linear infinite;
+}
+
+@keyframes scene-dash {
+  to { stroke-dashoffset: -88; }
+}
+
+.beacon-glow {
+  transform-origin: center;
+  transform-box: fill-box;
+  animation: beacon-pulse 1.7s ease-in-out infinite;
+}
+
+@keyframes beacon-pulse {
+  0%, 100% { transform: scale(1); opacity: 0.35; }
+  50% { transform: scale(1.35); opacity: 0.12; }
+}
+
+.scene-spark {
+  transform-origin: center;
+  transform-box: fill-box;
+  animation: scene-twinkle 2.6s ease-in-out infinite;
+}
+
+.scene-spark--two { animation-delay: 0.9s; }
+.scene-spark--three { animation-delay: 1.6s; }
+
+@keyframes scene-twinkle {
+  0%, 100% { transform: scale(1) rotate(0deg); opacity: 0.85; }
+  50% { transform: scale(1.35) rotate(22deg); opacity: 1; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .scene-car,
+  .scene-orb,
+  .scene-gear,
+  .scene-link,
+  .scene-ring,
+  .beacon-glow,
+  .scene-spark {
+    animation: none;
+  }
 }
 
 .bento-main-copy {
@@ -2262,14 +2365,6 @@ a {
 @keyframes mascot-spark {
   0%, 100% { transform: scale(1) rotate(0deg); opacity: 0.85; }
   50% { transform: scale(1.3) rotate(24deg); opacity: 1; }
-}
-
-.ai-fab-spark {
-  position: absolute;
-  top: 4px;
-  left: 4px;
-  color: #ffc38e;
-  font-size: 12px;
 }
 
 .ai-fab-copy {
@@ -6675,5 +6770,16 @@ a {
   .banner-strip-card {
     height: 178px;
     border-radius: 19px;
+  }
+}
+
+@media (max-width: 640px) {
+  .bento-main-scene {
+    width: 100%;
+    opacity: 0.42;
+  }
+
+  .bento-main-veil {
+    background: linear-gradient(275deg, rgba(10, 26, 38, 0.82) 26%, rgba(10, 26, 38, 0.35) 58%, rgba(10, 26, 38, 0.08) 82%);
   }
 }
