@@ -115,7 +115,7 @@ function Field({
         />
         {showToggle && (
           <button className="field-toggle" type="button" onClick={onToggle} aria-label={visible ? "پنهان کردن رمز عبور" : "نمایش رمز عبور"}>
-            <span>{visible ? "پنهان" : "نمایش"}</span>
+            <Icon name={visible ? "eye-off" : "eye"} size={17} />
           </button>
         )}
       </span>
@@ -179,7 +179,7 @@ export function LoginScreen() {
           <div className="auth-mobile-brand"><BrandLogo /></div>
           <div className="auth-heading">
             <span className="auth-kicker auth-kicker--light">خودرو چاره، همیشه کنارته</span>
-            <h1 id="login-heading">خوش برگشتی <span>👋</span></h1>
+            <h1 id="login-heading">خوش برگشتی</h1>
             <p>برای ادامه، وارد حساب کاربری‌ات شو.</p>
           </div>
           <form className="auth-form" onSubmit={handleSubmit}>

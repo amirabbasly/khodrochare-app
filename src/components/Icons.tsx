@@ -35,7 +35,9 @@ type IconName =
   | "ticket"
   | "chat"
   | "location"
-  | "refresh";
+  | "refresh"
+  | "eye"
+  | "eye-off";
 
 const paths: Record<IconName, ReactNode> = {
   menu: <><path d="M4 7h16M4 12h16M4 17h16" /></>,
@@ -72,6 +74,8 @@ const paths: Record<IconName, ReactNode> = {
   chat: <><path d="M20 11.5a7.5 7.5 0 0 1-11.5 6.4L4 20l1.1-4.5A7.5 7.5 0 1 1 20 11.5Z" /><path d="M8 11h.01M12 11h.01M16 11h.01" /></>,
   location: <><path d="M20 10c0 5-8 11-8 11S4 15 4 10a8 8 0 1 1 16 0Z" /><path d="M9 10a3 3 0 1 0 6 0 3 3 0 0 0-6 0Z" /></>,
   refresh: <><path d="M20 7v5h-5M4 17v-5h5" /><path d="M6.1 9a7 7 0 0 1 11.5-2L20 12M4 12l2.4 5a7 7 0 0 0 11.5-2" /></>,
+  eye: <><path d="M2.5 12s3.6-6.5 9.5-6.5S21.5 12 21.5 12 17.9 18.5 12 18.5 2.5 12 2.5 12Z" /><circle cx="12" cy="12" r="3" /></>,
+  "eye-off": <><path d="M4 4l16 16" /><path d="M9.9 5.7A9.7 9.7 0 0 1 12 5.5c5.9 0 9.5 6.5 9.5 6.5a17.6 17.6 0 0 1-2.8 3.6M6.2 7.8A17.4 17.4 0 0 0 2.5 12s3.6 6.5 9.5 6.5a9.6 9.6 0 0 0 3.9-.8" /><path d="M9.9 9.9a3 3 0 0 0 4.2 4.2" /></>,
 };
 
 export function Icon({

@@ -1,9 +1,10 @@
 "use client";
 
+import Image from "next/image";
 import { useEffect, useState, type FormEvent, type ReactNode } from "react";
 import { useRouter } from "next/navigation";
 import { BrandLogo, Icon } from "@/components/Icons";
-import { MiniCar, PromoArtwork } from "@/components/Artwork";
+import { MiniCar } from "@/components/Artwork";
 import { ServiceIllustration, type ServiceId } from "@/components/ServiceIllustration";
 
 type View =
@@ -51,16 +52,62 @@ const drawerItems: { label: string; view: View; icon: "wallet" | "history" | "ma
   { label: "تماس با پشتیبانی", view: "support", icon: "support" },
 ];
 
-const topPromos = [
-  { title: "اولین جمعه‌بازار لوازم یدکی ایران", description: "تا ۱۰۰٪ تخفیف روی قطعات منتخب؛ جمعه‌ها، پر از چاره!", type: "parts", theme: "parts", tag: "جمعه‌بازار" },
-  { title: "اولین تالار تخصصی فروش و مزایده خودرو ایران", description: "خودروی بعدی‌ات را با خیال راحت پیدا کن.", type: "auction", theme: "auction", tag: "تالار خودرو" },
-  { title: "اولین اپلیکیشن جامع خدمات خودرویی در ایران", description: "یک خانه برای تمام نیازهای خودروی تو.", type: "app", theme: "app", tag: "خودرو چاره" },
+const heroSlides = [
+  {
+    id: "hero-roadside",
+    image: "/slides/hero-roadside.jpg",
+    tag: "امداد خودرو ۲۴ ساعته",
+    title: "راه بیفت، چاره با ماست.",
+    description: "هر وقت تو راه بمانی، امدادگرهای خودرو چاره سریع کنارت می‌رسند.",
+    action: "درخواست امداد",
+  },
+  {
+    id: "hero-carwash",
+    image: "/slides/hero-carwash.jpg",
+    tag: "سرویس و نگهداری",
+    title: "ماشینت سرحال، مسیرت روشن.",
+    description: "کارواش سیار و سرویس دوره‌ای، درست در محل خودت.",
+    action: "دیدن خدمات سرویس",
+  },
+  {
+    id: "hero-care",
+    image: "/slides/hero-care.jpg",
+    tag: "همه‌چیز برای ماشینت",
+    title: "هرچیزی برای خودروت، یک‌جا.",
+    description: "از قطعه و بیمه تا کارشناسی خودرو؛ فقط با چند لمس.",
+    action: "شروع کن",
+  },
 ];
 
-const bottomPromos = [
-  { title: "پوشش کامل تهران، کرج و کل شمال کشور", description: "هرجا که باشی، چاره نزدیک توست.", type: "coverage", theme: "coverage", tag: "پوشش گسترده" },
-  { title: "کارشناسی تخصصی خودرو تا فروش", description: "از بررسی دقیق تا پیدا کردن خریدار، همراهت هستیم.", type: "inspection", theme: "inspection", tag: "خرید مطمئن" },
-  { title: "ماشینتو با گوشی تو دستت دیاگ بزن", description: "عیب‌یابی هوشمند؛ ساده، سریع و همیشه در دسترس.", type: "diagnostic", theme: "diagnostic", tag: "دیاگ هوشمند" },
+const bannerSlides = [
+  {
+    id: "banner-parts",
+    image: "/slides/banner-parts.jpg",
+    tag: "جمعه‌بازار",
+    title: "اولین جمعه‌بازار لوازم یدکی ایران",
+    description: "تا ۱۰۰٪ تخفیف روی قطعات منتخب؛ جمعه‌ها، پر از چاره!",
+  },
+  {
+    id: "banner-auction",
+    image: "/slides/banner-auction.jpg",
+    tag: "تالار خودرو",
+    title: "تالار تخصصی فروش و مزایده خودرو",
+    description: "خودروی بعدی‌ات را با خیال راحت پیدا کن.",
+  },
+  {
+    id: "banner-coverage",
+    image: "/slides/banner-coverage.jpg",
+    tag: "پوشش گسترده",
+    title: "پوشش تهران، کرج و کل شمال کشور",
+    description: "هرجا که باشی، چاره نزدیک توست.",
+  },
+  {
+    id: "banner-diagnostic",
+    image: "/slides/banner-diagnostic.jpg",
+    tag: "دیاگ هوشمند",
+    title: "ماشینت را با گوشی دیاگ بزن",
+    description: "عیب‌یابی هوشمند؛ ساده، سریع و همیشه در دسترس.",
+  },
 ];
 
 const bottomItems: { label: string; view: View; icon: "home" | "market" | "auction" | "user" }[] = [
@@ -112,89 +159,189 @@ function Avatar({ name, large = false }: { name: string; large?: boolean }) {
   return <span className={`user-avatar${large ? " user-avatar--large" : ""}`} aria-hidden="true">{initials}</span>;
 }
 
-function PromoSlider({ items, onAction }: { items: typeof topPromos; onAction: (index: number) => void }) {
+function HeroSlider({ onService, onExplore }: { onService: (service: Service) => void; onExplore: () => void }) {
   const [current, setCurrent] = useState(0);
-  const item = items[current];
-  function shift(amount: number) {
-    setCurrent((index) => (index + amount + items.length) % items.length);
+  const total = heroSlides.length;
+
+  useEffect(() => {
+    const timer = window.setInterval(() => setCurrent((index) => (index + 1) % total), 6500);
+    return () => window.clearInterval(timer);
+  }, [total]);
+
+  function handleAction() {
+    if (current === 0) onService(services[0]);
+    else if (current === 1) onService(services[2]);
+    else onExplore();
   }
+
   return (
-    <article className={`promo-slider promo-slider--${item.theme}`}>
-      <div className="promo-slider-content">
-        <div className="promo-copy">
-          <span className="promo-tag"><span />{item.tag}</span>
-          <h3>{item.title}</h3>
-          <p>{item.description}</p>
-          <button className="promo-link" type="button" onClick={() => onAction(current)}>بیشتر ببین <Icon name="arrow-left" size={16} /></button>
-        </div>
-        <div className="promo-visual"><PromoArtwork type={item.type} /></div>
+    <section className="hero-slider" aria-roledescription="carousel" aria-label="پیشنهادهای ویژه خودرو چاره">
+      {heroSlides.map((slide, index) => (
+        <article key={slide.id} className={`hero-slide${index === current ? " is-active" : ""}`} aria-hidden={index !== current}>
+          <Image src={slide.image} alt="" fill sizes="(max-width: 760px) 100vw, 1320px" priority={index === 0} className="hero-slide-image" />
+          <div className="hero-slide-veil" />
+          <div className="hero-slide-copy">
+            <span className="hero-slide-tag">{slide.tag}</span>
+            <h2>{slide.title}</h2>
+            <p>{slide.description}</p>
+            <button className="hero-slide-cta" type="button" tabIndex={index === current ? 0 : -1} onClick={handleAction}>
+              {slide.action} <Icon name="arrow-left" size={16} />
+            </button>
+          </div>
+        </article>
+      ))}
+      <div className="hero-slider-bullets">
+        {heroSlides.map((slide, index) => (
+          <button
+            key={slide.id}
+            type="button"
+            className={`slider-bullet${index === current ? " is-active" : ""}`}
+            aria-label={`اسلاید ${index + 1} از ${total}`}
+            aria-current={index === current}
+            onClick={() => setCurrent(index)}
+          />
+        ))}
       </div>
-      <div className="promo-controls">
-        <div className="promo-dots" aria-label={`اسلاید ${current + 1} از ${items.length}`}>
-          {items.map((promo, index) => <button key={promo.type} type="button" className={`promo-dot${index === current ? " is-active" : ""}`} aria-label={`نمایش اسلاید ${index + 1}`} onClick={() => setCurrent(index)} />)}
-        </div>
-        <div className="promo-arrows">
-          <button type="button" onClick={() => shift(-1)} aria-label="اسلاید قبلی"><Icon name="arrow-right" size={15} /></button>
-          <button type="button" onClick={() => shift(1)} aria-label="اسلاید بعدی"><Icon name="arrow-left" size={15} /></button>
-        </div>
-      </div>
-    </article>
+    </section>
   );
 }
 
-function ServiceCard({ service, onClick }: { service: Service; onClick: () => void }) {
+function BannerSlider({ onAction }: { onAction: (index: number) => void }) {
+  const [current, setCurrent] = useState(0);
+  const total = bannerSlides.length;
+
+  useEffect(() => {
+    const timer = window.setInterval(() => setCurrent((index) => (index + 1) % total), 7000);
+    return () => window.clearInterval(timer);
+  }, [total]);
+
+  return (
+    <section className="banner-slider" aria-roledescription="carousel" aria-label="چاره‌های بیشتر برای ماشینت">
+      <div className="banner-slider-track">
+        {bannerSlides.map((slide, index) => (
+          <article key={slide.id} className={`banner-slide${index === current ? " is-active" : ""}`} aria-hidden={index !== current}>
+            <Image src={slide.image} alt="" fill sizes="(max-width: 760px) 100vw, 1320px" className="banner-slide-image" />
+            <div className="banner-slide-veil" />
+            <div className="banner-slide-copy">
+              <span className="banner-slide-tag">{slide.tag}</span>
+              <h3>{slide.title}</h3>
+              <p>{slide.description}</p>
+              <button className="banner-slide-link" type="button" tabIndex={index === current ? 0 : -1} onClick={() => onAction(index)}>
+                بیشتر ببین <Icon name="arrow-left" size={15} />
+              </button>
+            </div>
+          </article>
+        ))}
+      </div>
+      <div className="banner-slider-bullets">
+        {bannerSlides.map((slide, index) => (
+          <button
+            key={slide.id}
+            type="button"
+            className={`slider-bullet${index === current ? " is-active" : ""}`}
+            aria-label={`اسلاید ${index + 1} از ${total}`}
+            aria-current={index === current}
+            onClick={() => setCurrent(index)}
+          />
+        ))}
+      </div>
+    </section>
+  );
+}
+
+function ServiceCard({ service, onClick, delay }: { service: Service; onClick: () => void; delay?: number }) {
   return (
     <button className={`service-card service-card--${service.id}`} type="button" onClick={onClick}>
-      <ServiceIllustration type={service.id} />
+      <ServiceIllustration type={service.id} size="md" delay={delay} />
       <span className="service-name">{service.name}</span>
       <span className="service-note">{service.note}</span>
     </button>
   );
 }
 
-function HomeView({ onService, onNavigate, onToast, userName }: { onService: (service: Service) => void; onNavigate: (view: View) => void; onToast: (message: string) => void; userName: string }) {
+function HomeView({
+  onService,
+  onNavigate,
+  onToast,
+  balance,
+}: {
+  onService: (service: Service) => void;
+  onNavigate: (view: View) => void;
+  onToast: (message: string) => void;
+  balance: number;
+}) {
+  const mainServices = services.slice(0, 4);
+  const moreServices = services.slice(4);
+
   return (
     <div className="home-content">
-      <div className="home-greeting-row">
-        <div><span className="home-eyebrow">امروز، وقتِ رسیدگی به ماشینته</span><h1>سلام {userName.split(" ")[0]} <span>✦</span></h1><p>هر چیزی برای خودروت لازم داری، از همین‌جا شروع کن.</p></div>
-        <button className="location-chip" type="button" onClick={() => onToast("موقعیت فعلی شما: تهران، ایران")}><span className="location-chip-icon"><Icon name="pin" size={16} /></span><span><small>موقعیت شما</small><strong>تهران، ایران</strong></span><Icon name="chevron" size={15} /></button>
-      </div>
+      <HeroSlider onService={onService} onExplore={() => document.getElementById("services")?.scrollIntoView({ behavior: "smooth" })} />
 
-      <section className="home-hero">
-        <div className="home-hero-copy">
-          <span className="hero-label"><span className="hero-label-dot" />همه‌چیز برای ماشینت، یک‌جا</span>
-          <h2>راه بیفت، <em>چاره</em> با ماست.</h2>
-          <p>با خدمات قابل‌اعتماد خودرو چاره، هر مسیر آسوده‌تر از قبل است.</p>
-          <div className="hero-buttons"><button className="hero-primary" type="button" onClick={() => onService(services[0])}>درخواست امداد <Icon name="arrow-left" size={17} /></button><button className="hero-secondary" type="button" onClick={() => document.getElementById("services")?.scrollIntoView({ behavior: "smooth" })}>دیدن خدمات</button></div>
-          <div className="hero-trust"><span><i />پشتیبانی ۲۴ ساعته</span><span><i />متخصص‌های تأییدشده</span></div>
+      <section className="home-stats" aria-label="خلاصه وضعیت حساب و خودرو">
+        <button className="stat-cell" type="button" onClick={() => onNavigate("wallet")}>
+          <span className="stat-icon"><ServiceIllustration type="wallet" size="sm" /></span>
+          <span className="stat-copy">
+            <small>موجودی کیف پول</small>
+            <strong>{balance.toLocaleString("fa-IR")}</strong>
+            <em>تومان</em>
+          </span>
+        </button>
+
+        <button className="stat-cell stat-cell--status" type="button" onClick={() => onNavigate("history")}>
+          <span className="stat-icon"><ServiceIllustration type="roadside" size="sm" delay={0.3} /></span>
+          <span className="stat-copy">
+            <small>آخرین خدمت · امداد خودرو</small>
+            <span className="stat-progress" role="progressbar" aria-valuenow={50} aria-valuemin={0} aria-valuemax={100} aria-label="پیشرفت آخرین خدمت">
+              <span className="stat-progress-fill" />
+            </span>
+            <em className="stat-status-text">امدادگر در مسیر ...</em>
+          </span>
+        </button>
+
+        <button className="stat-cell" type="button" onClick={() => onService(services[9])}>
+          <span className="stat-icon"><ServiceIllustration type="reminder" size="sm" delay={0.6} /></span>
+          <span className="stat-copy">
+            <small>سرویس دوره‌ای</small>
+            <strong>۴۵</strong>
+            <em>روز باقی‌مانده</em>
+          </span>
+        </button>
+
+        <button className="stat-cell" type="button" onClick={() => onService(services[9])}>
+          <span className="stat-icon"><ServiceIllustration type="oil" size="sm" delay={0.9} /></span>
+          <span className="stat-copy">
+            <small>سرویس روغن</small>
+            <strong>۱۲</strong>
+            <em>روز باقی‌مانده</em>
+          </span>
+        </button>
+      </section>
+
+      <section className="main-services-section">
+        <SectionTitle title="خدمات اصلی خودرو چاره" caption="چهار خدمت پرطرفدار ما، همیشه آمادهٔ کمک به تو." />
+        <div className="main-services-grid">
+          {mainServices.map((service, index) => (
+            <button key={service.id} className={`main-service-card main-service-card--${service.id}`} type="button" onClick={() => onService(service)}>
+              <span className="main-service-art"><ServiceIllustration type={service.id} size="lg" delay={index * 0.35} /></span>
+              <strong>{service.name}</strong>
+              <small>{service.note}</small>
+              <span className="main-service-cta">درخواست خدمت <Icon name="arrow-left" size={13} /></span>
+            </button>
+          ))}
         </div>
-        <div className="home-hero-art"><div className="hero-orbit hero-orbit--one" /><div className="hero-orbit hero-orbit--two" /><span className="hero-art-badge"><Icon name="shield" size={16} /> آرامش در هر مسیر</span><svg viewBox="0 0 520 300" className="hero-car-art" fill="none" aria-hidden="true"><ellipse cx="283" cy="251" rx="196" ry="20" fill="#07131D" opacity=".3"/><circle cx="340" cy="156" r="118" fill="#FF8A36" opacity=".13"/><circle cx="340" cy="156" r="83" stroke="#FFB17D" strokeOpacity=".2"/><circle cx="340" cy="156" r="60" stroke="#FFB17D" strokeOpacity=".18"/><path d="m92 192 22-48c9-20 26-32 47-36l56-10 57-49c12-10 27-15 43-15h45c14 0 28 7 37 18l49 59 30 12c13 5 22 17 25 31l5 38c2 15-9 27-24 27H102c-14 0-17-13-10-27Z" fill="url(#home-car-body)" stroke="#E3EAF1" strokeWidth="2"/><path d="m177 104 53-9 54-46c10-8 21-12 34-12h38c10 0 19 5 26 13l43 54H177Z" fill="#182B3A" stroke="#AEBECA" strokeOpacity=".8" strokeWidth="2"/><path d="m236 96 52-48m8-11v59m19-59 3 59" stroke="#8297A8" strokeOpacity=".55" strokeWidth="2"/><path d="m107 183 13-31h47l-12 40h-52m361-40 29 10 4 27h-31l-2-37Z" fill="#FFD8C3"/><path d="m107 183 13-31h47l-12 40h-52m361-40 29 10 4 27h-31l-2-37Z" stroke="#F5AE7F" strokeWidth="2"/><path d="M185 194h225" stroke="#233C4E" strokeWidth="2" strokeLinecap="round"/><path d="m105 200 22 4m322-5 31-2" stroke="#FF7929" strokeWidth="4" strokeLinecap="round"/><circle cx="176" cy="205" r="38" fill="#0D1822" stroke="#9EADB9" strokeWidth="3"/><circle cx="176" cy="205" r="23" fill="#253B4D" stroke="#E8EDF1" strokeWidth="2"/><circle cx="176" cy="205" r="7" fill="#FF7929"/><path d="m176 183 3 14m18 8-14 3m-7 20-3-14m-18-8 14-3m18-8-10 10m-20 20 10-10m20 1-10-10m-20-20 10 10" stroke="#C4D0D9" strokeWidth="2" strokeLinecap="round"/><circle cx="418" cy="205" r="38" fill="#0D1822" stroke="#9EADB9" strokeWidth="3"/><circle cx="418" cy="205" r="23" fill="#253B4D" stroke="#E8EDF1" strokeWidth="2"/><circle cx="418" cy="205" r="7" fill="#FF7929"/><path d="m418 183 3 14m18 8-14 3m-7 20-3-14m-18-8 14-3m18-8-10 10m-20 20 10-10m20 1-10-10m-20-20 10 10" stroke="#C4D0D9" strokeWidth="2" strokeLinecap="round"/><path d="m377 40 6-13 6 13 13 6-13 6-6 13-6-13-13-6 13-6Z" fill="#FF9A52"/><path d="m96 94 4-8 4 8 8 4-8 4-4 8-4-8-8-4 8-4Z" fill="#EAF3FC" opacity=".72"/><defs><linearGradient id="home-car-body" x1="110" y1="115" x2="496" y2="216" gradientUnits="userSpaceOnUse"><stop stopColor="#FBFCFD"/><stop offset=".46" stopColor="#B9C7D1"/><stop offset="1" stopColor="#778B9A"/></linearGradient></defs></svg></div>
       </section>
 
-      <section className="vehicle-strip">
-        <div className="vehicle-strip-icon"><Icon name="car" size={23} /></div>
-        <div className="vehicle-strip-info"><span>خودروی انتخاب‌شده</span><strong>پژو ۲۰۷ پانوراما <small>· مدل ۱۴۰۱</small></strong></div>
-        <div className="vehicle-mileage"><span className="vehicle-health-dot" /><span>وضعیت خودرو <b>خوب</b></span></div>
-        <button className="vehicle-change" type="button" onClick={() => onNavigate("mycars")}>تغییر خودرو <Icon name="chevron" size={15} /></button>
-      </section>
+      <BannerSlider onAction={(index) => (index === 0 ? onNavigate("market") : index === 1 ? onNavigate("hall") : index === 3 ? onService(services[4]) : onToast("پوشش خودرو چاره: تهران، کرج و کل شمال کشور"))} />
 
       <section className="services-section" id="services">
-        <SectionTitle title="خدمات خودرویی" caption="هر نیازی، فقط با چند لمس فاصله دارد." action={<span className="service-count">۱۳ خدمت <span>✦</span></span>} />
-        <div className="services-grid">{services.map((service) => <ServiceCard key={service.id} service={service} onClick={() => onService(service)} />)}</div>
+        <SectionTitle
+          title="بقیه خدمات"
+          caption="هر نیازی، فقط با چند لمس فاصله دارد."
+          action={<span className="service-count"><Icon name="sparkles" size={12} /> {moreServices.length} خدمت دیگر</span>}
+        />
+        <div className="services-grid">{moreServices.map((service, index) => <ServiceCard key={service.id} service={service} onClick={() => onService(service)} delay={index * 0.18} />)}</div>
       </section>
 
-      <section className="promo-section">
-        <SectionTitle title="چاره‌های بیشتر برای ماشینت" caption="دنیایی از انتخاب‌های تازه، مخصوص تو." />
-        <div className="promo-grid">
-          <PromoSlider items={topPromos} onAction={(index) => onNavigate(index === 0 ? "market" : "hall")} />
-          <PromoSlider items={bottomPromos} onAction={(index) => index === 2 ? onService(services[4]) : onService(services[12])} />
-        </div>
-      </section>
-
-      <section className="home-shortcuts">
-        <button className="shortcut-card shortcut-market" type="button" onClick={() => onNavigate("market")}><span className="shortcut-art"><Icon name="tag" size={24} /></span><span><strong>جمعه‌بازار قطعات</strong><small>قطعهٔ خوب، قیمت خوب</small></span><Icon name="arrow-left" size={17} /></button>
-        <button className="shortcut-card shortcut-hall" type="button" onClick={() => onNavigate("hall")}><span className="shortcut-art"><Icon name="auction" size={24} /></span><span><strong>تالار فروش خودرو</strong><small>خرید و فروش با اطمینان</small></span><Icon name="arrow-left" size={17} /></button>
-      </section>
       <p className="home-footnote"><Icon name="shield" size={14} /> خودرو چاره، همراه مطمئن تو در مسیرهای زندگی.</p>
     </div>
   );
@@ -226,7 +373,7 @@ function HistoryView({ onBack }: { onBack: () => void }) {
     { title: "استعلام خلافی", date: "۱۲ مهر ۱۴۰۴ · ۰۹:۱۲", status: "انجام‌شده", kind: "خودرو", icon: "fines" as ServiceId },
   ];
   const filteredRows = filter === "همه" ? rows : rows.filter((row) => row.status === filter);
-  return <div className="subpage"><PageTitle title="تاریخچهٔ درخواست‌ها" subtitle="همهٔ سرویس‌ها و پیگیری‌های تو اینجاست." onBack={onBack} /><div className="filter-tabs">{["همه", "در انتظار", "انجام‌شده"].map((item) => <button type="button" key={item} className={filter === item ? "is-active" : ""} onClick={() => setFilter(item)}>{item}</button>)}</div><section className="panel-card history-list">{filteredRows.map((row) => <article className="history-row" key={row.title}><ServiceIllustration type={row.icon} /><div className="history-details"><span>{row.kind}</span><strong>{row.title}</strong><small><Icon name="calendar" size={13} />{row.date}</small></div><span className={`status-pill${row.status === "انجام‌شده" ? " status-pill--done" : ""}`}><i />{row.status}</span><button className="row-more" type="button" aria-label="گزینه‌ها"><Icon name="more" size={20} /></button></article>)}</section><div className="history-note"><Icon name="sparkles" size={18} /><span>با ثبت درخواست جدید، جزئیات آن همین‌جا نمایش داده می‌شود.</span></div></div>;
+  return <div className="subpage"><PageTitle title="تاریخچهٔ درخواست‌ها" subtitle="همهٔ سرویس‌ها و پیگیری‌های تو اینجاست." onBack={onBack} /><div className="filter-tabs">{["همه", "در انتظار", "انجام‌شده"].map((item) => <button type="button" key={item} className={filter === item ? "is-active" : ""} onClick={() => setFilter(item)}>{item}</button>)}</div><section className="panel-card history-list">{filteredRows.map((row) => <article className="history-row" key={row.title}><ServiceIllustration type={row.icon} size="sm" /><div className="history-details"><span>{row.kind}</span><strong>{row.title}</strong><small><Icon name="calendar" size={13} />{row.date}</small></div><span className={`status-pill${row.status === "انجام‌شده" ? " status-pill--done" : ""}`}><i />{row.status}</span><button className="row-more" type="button" aria-label="گزینه‌ها"><Icon name="more" size={20} /></button></article>)}</section><div className="history-note"><Icon name="sparkles" size={18} /><span>با ثبت درخواست جدید، جزئیات آن همین‌جا نمایش داده می‌شود.</span></div></div>;
 }
 
 function MarketView({ onBack, onToast }: { onBack: () => void; onToast: (message: string) => void }) {
@@ -306,7 +453,7 @@ function InviteView({ onBack, onToast }: { onBack: () => void; onToast: (message
     try { await navigator.clipboard.writeText("CHAREH-ARMAN"); onToast("کد دعوت کپی شد"); } catch { onToast("کد دعوت شما: CHAREH-ARMAN"); }
   }
   return <div className="subpage"><PageTitle title="دعوت از دوستان" subtitle="با هم، مسیرها آسوده‌تر می‌شوند." onBack={onBack} />
-    <section className="invite-hero"><div className="invite-text"><span className="invite-eyebrow"><Icon name="gift" size={15} /> هدیه‌ای برای تو و دوستت</span><h2>دوستت را دعوت کن،<br /><em>چاره را شریک شو!</em></h2><p>با هر دعوت موفق، شما و دوستت از هدیه‌های ویژهٔ خودرو چاره بهره‌مند می‌شوید.</p><div className="invite-code"><span><small>کد دعوت اختصاصی تو</small><b dir="ltr">CHAREH-ARMAN</b></span><button type="button" onClick={copyCode}><Icon name="tag" size={17} /> کپی کد</button></div><button className="invite-share" type="button" onClick={() => onToast("لینک دعوت برای اشتراک‌گذاری آماده شد")}><Icon name="send" size={17} /> دعوت از دوستان</button></div><div className="invite-art"><span className="invite-art-circle"><Icon name="gift" size={74} /></span><span className="invite-spark invite-spark--one">✦</span><span className="invite-spark invite-spark--two">✳</span><span className="invite-confetti" /></div></section>
+    <section className="invite-hero"><div className="invite-text"><span className="invite-eyebrow"><Icon name="gift" size={15} /> هدیه‌ای برای تو و دوستت</span><h2>دوستت را دعوت کن،<br /><em>چاره را شریک شو!</em></h2><p>با هر دعوت موفق، شما و دوستت از هدیه‌های ویژهٔ خودرو چاره بهره‌مند می‌شوید.</p><div className="invite-code"><span><small>کد دعوت اختصاصی تو</small><b dir="ltr">CHAREH-ARMAN</b></span><button type="button" onClick={copyCode}><Icon name="tag" size={17} /> کپی کد</button></div><button className="invite-share" type="button" onClick={() => onToast("لینک دعوت برای اشتراک‌گذاری آماده شد")}><Icon name="send" size={17} /> دعوت از دوستان</button></div><div className="invite-art"><span className="invite-art-circle"><Icon name="gift" size={74} /></span><span className="invite-spark invite-spark--one"><Icon name="sparkles" size={17} /></span><span className="invite-spark invite-spark--two"><Icon name="sparkles" size={22} /></span><span className="invite-confetti" /></div></section>
     <div className="invite-steps"><div><b>۰۱</b><strong>کدت را بفرست</strong><small>کد دعوت را با دوستت به اشتراک بگذار.</small></div><div><b>۰۲</b><strong>دوستت ثبت‌نام کند</strong><small>دوستت با کد تو وارد خودرو چاره می‌شود.</small></div><div><b>۰۳</b><strong>هدیه‌تان را بگیرید</strong><small>پاداش برای هر دوی شما فعال می‌شود.</small></div></div>
   </div>;
 }
@@ -326,7 +473,7 @@ function NotificationsView({ onBack, onToast }: { onBack: () => void; onToast: (
     { title: "جمعه‌بازار این هفته شروع شد", description: "پیشنهادهای ویژهٔ قطعات را از دست نده.", time: "دیروز · ۱۷:۰۰", icon: "fines" as ServiceId, unread: true },
     { title: "حساب کاربری‌ات آماده است", description: "خوش آمدی به خانوادهٔ خودرو چاره!", time: "۲۴ مهر · ۱۲:۱۵", icon: "insurance" as ServiceId, unread: false },
   ];
-  return <div className="subpage"><PageTitle title="اعلان‌ها" subtitle="خبرهای تازه و یادآورهای خودروی تو." onBack={onBack} action={<button className="text-link" type="button" onClick={() => onToast("همهٔ اعلان‌ها خوانده شدند")}>خواندن همه</button>} /><section className="panel-card notification-list">{notices.map((notice) => <article className={`notification-row${notice.unread ? " is-unread" : ""}`} key={notice.title}><ServiceIllustration type={notice.icon} /><div><strong>{notice.title}</strong><p>{notice.description}</p><small><Icon name="clock" size={13} />{notice.time}</small></div>{notice.unread && <i className="notification-unread" />}</article>)}</section></div>;
+  return <div className="subpage"><PageTitle title="اعلان‌ها" subtitle="خبرهای تازه و یادآورهای خودروی تو." onBack={onBack} action={<button className="text-link" type="button" onClick={() => onToast("همهٔ اعلان‌ها خوانده شدند")}>خواندن همه</button>} /><section className="panel-card notification-list">{notices.map((notice) => <article className={`notification-row${notice.unread ? " is-unread" : ""}`} key={notice.title}><ServiceIllustration type={notice.icon} size="sm" /><div><strong>{notice.title}</strong><p>{notice.description}</p><small><Icon name="clock" size={13} />{notice.time}</small></div>{notice.unread && <i className="notification-unread" />}</article>)}</section></div>;
 }
 
 function ServiceView({ service, onBack, onToast }: { service: Service; onBack: () => void; onToast: (message: string) => void }) {
@@ -335,7 +482,7 @@ function ServiceView({ service, onBack, onToast }: { service: Service; onBack: (
   const [date, setDate] = useState("");
   function submit(event: FormEvent<HTMLFormElement>) { event.preventDefault(); onToast(`درخواست «${service.name}» ثبت شد؛ به‌زودی با شما تماس می‌گیریم.`); }
   return <div className="subpage"><PageTitle title={service.name} subtitle={`ثبت درخواست ${service.name} با چند قدم ساده`} onBack={onBack} />
-    <div className="service-detail-layout"><section className={`service-detail-intro service-detail-intro--${service.id}`}><div className="service-detail-art"><ServiceIllustration type={service.id} /></div><span className="detail-label">خدمت هوشمند خودرو چاره</span><h2>{service.name}<br /><em>درست همین‌جا.</em></h2><p>سرویس موردنیازت را ثبت کن تا متخصصان تأییدشدهٔ خودرو چاره در کنارت باشند.</p><div className="detail-benefits"><span><Icon name="shield" size={15} />کارشناس تأییدشده</span><span><Icon name="clock" size={15} />پاسخ‌گویی سریع</span><span><Icon name="check" size={15} />قیمت شفاف</span></div></section>
+    <div className="service-detail-layout"><section className={`service-detail-intro service-detail-intro--${service.id}`}><div className="service-detail-art"><ServiceIllustration type={service.id} size="lg" /></div><span className="detail-label">خدمت هوشمند خودرو چاره</span><h2>{service.name}<br /><em>درست همین‌جا.</em></h2><p>سرویس موردنیازت را ثبت کن تا متخصصان تأییدشدهٔ خودرو چاره در کنارت باشند.</p><div className="detail-benefits"><span><Icon name="shield" size={15} />کارشناس تأییدشده</span><span><Icon name="clock" size={15} />پاسخ‌گویی سریع</span><span><Icon name="check" size={15} />قیمت شفاف</span></div></section>
       <section className="panel-card service-request-card"><div className="request-heading"><span>درخواست خدمت</span><h2>چند قدم تا آرامش</h2><p>اطلاعات را کامل کن؛ ما ادامهٔ مسیر را می‌سازیم.</p></div><form className="service-request-form" onSubmit={submit}><label className="form-field"><span className="field-label">خودرو</span><span className="field-control"><select value={car} onChange={(event) => setCar(event.target.value)}><option>پژو ۲۰۷ پانوراما · ۱۴۰۱</option><option>پراید ۱۳۱ · ۱۳۹۸</option><option>سایر خودروها</option></select><Icon name="chevron" size={15} /></span></label><label className="form-field"><span className="field-label">آدرس دریافت خدمت</span><span className="field-control"><select value={address} onChange={(event) => setAddress(event.target.value)}><option>خانه · سعادت‌آباد، تهران</option><option>محل کار · ونک، تهران</option><option>آدرس دیگر</option></select><Icon name="chevron" size={15} /></span></label><label className="form-field"><span className="field-label">زمان پیشنهادی</span><span className="field-control"><input type="datetime-local" value={date} onChange={(event) => setDate(event.target.value)} /></span></label><label className="form-field"><span className="field-label">توضیحات (اختیاری)</span><span className="field-control"><input placeholder="اگر نکته‌ای هست، برایمان بنویس…" /></span></label><div className="request-footnote"><Icon name="shield" size={15} />قیمت نهایی پیش از تأیید با شما هماهنگ می‌شود.</div><button className="primary-button request-submit" type="submit">ثبت درخواست خدمت <Icon name="arrow-left" size={17} /></button></form></section></div>
   </div>;
 }
@@ -349,7 +496,7 @@ function AIChat({ open, setOpen }: { open: boolean; setOpen: (open: boolean) => 
   }
   return <>
     {open && <section className="chat-window" aria-label="گفت‌وگو با چاره‌یار"><div className="chat-header"><span className="chat-avatar"><span>AI</span></span><div><strong>چاره‌یار</strong><small><i />همراه هوشمند تو</small></div><button type="button" onClick={() => setOpen(false)} aria-label="بستن گفت‌وگو"><Icon name="close" size={19} /></button></div><div className="chat-messages">{messages.map((message, index) => <p key={`${message.from}-${index}`} className={`chat-bubble${message.from === "user" ? " chat-bubble--user" : ""}`}>{message.text}</p>)}</div><form className="chat-input-row" onSubmit={send}><input value={text} onChange={(event) => setText(event.target.value)} placeholder="پیامت را بنویس…" aria-label="پیام شما" /><button type="submit" aria-label="ارسال پیام"><Icon name="send" size={17} /></button></form><div className="chat-demo-note">همراه هوشمند خودرو چاره</div></section>}
-    <button className={`ai-fab${open ? " ai-fab--open" : ""}`} type="button" onClick={() => setOpen(!open)} aria-label={open ? "بستن چاره‌یار" : "گفت‌وگو با هوش مصنوعی"}><span className="ai-fab-stars"><i>✦</i><b>AI</b></span><span className="ai-fab-copy">چاره‌یار <small>پشتیبانی هوشمند</small></span>{open ? <Icon name="close" size={18} /> : <span className="ai-fab-spark">✦</span>}</button>
+    <button className={`ai-fab${open ? " ai-fab--open" : ""}`} type="button" onClick={() => setOpen(!open)} aria-label={open ? "بستن چاره‌یار" : "گفت‌وگو با هوش مصنوعی"}><span className="ai-fab-stars"><i><Icon name="sparkles" size={13} /></i><b>AI</b></span><span className="ai-fab-copy">چاره‌یار <small>پشتیبانی هوشمند</small></span>{open ? <Icon name="close" size={18} /> : <span className="ai-fab-spark"><Icon name="sparkles" size={16} /></span>}</button>
   </>;
 }
 
@@ -449,7 +596,7 @@ export default function Dashboard() {
 
   let content: ReactNode;
   switch (view) {
-    case "home": content = <HomeView userName={userName} onService={openService} onNavigate={navigate} onToast={notify} />; break;
+    case "home": content = <HomeView balance={balance} onService={openService} onNavigate={navigate} onToast={notify} />; break;
     case "wallet": content = <WalletView balance={balance} onAdd={addBalance} onBack={() => navigate("home")} />; break;
     case "history": content = <HistoryView onBack={() => navigate("home")} />; break;
     case "market": content = <MarketView onBack={() => navigate("home")} onToast={notify} />; break;
@@ -461,7 +608,7 @@ export default function Dashboard() {
     case "support": content = <SupportView onBack={() => navigate("home")} onToast={notify} />; break;
     case "notifications": content = <NotificationsView onBack={() => navigate("home")} onToast={notify} />; break;
     case "service": content = <ServiceView service={selectedService} onBack={() => navigate("home")} onToast={notify} />; break;
-    default: content = <HomeView userName={userName} onService={openService} onNavigate={navigate} onToast={notify} />;
+    default: content = <HomeView balance={balance} onService={openService} onNavigate={navigate} onToast={notify} />;
   }
 
   return (
