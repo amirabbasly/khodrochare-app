@@ -5,6 +5,7 @@ import { useEffect, useState, type FormEvent, type ReactNode } from "react";
 import { useRouter } from "next/navigation";
 import { BrandLogo, Icon } from "@/components/Icons";
 import { AiMascot, MiniCar } from "@/components/Artwork";
+import { LocationPickerMap, TrackingMap } from "@/components/Maps";
 import { MoreDots3D, ServiceIllustration, type ServiceId } from "@/components/ServiceIllustration";
 
 type View =
@@ -19,7 +20,8 @@ type View =
   | "invite"
   | "support"
   | "notifications"
-  | "service";
+  | "service"
+  | "waiting";
 
 type UserSession = { name?: string; username?: string; phone?: string; wallet?: string };
 type Service = { id: ServiceId; name: string; note: string; category: string };
@@ -460,15 +462,192 @@ function NotificationsView({ onBack, onToast }: { onBack: () => void; onToast: (
   return <div className="subpage"><PageTitle title="اعلان‌ها" subtitle="خبرهای تازه و یادآورهای خودروی تو." onBack={onBack} action={<button className="text-link" type="button" onClick={() => onToast("همهٔ اعلان‌ها خوانده شدند")}>خواندن همه</button>} /><section className="panel-card notification-list">{notices.map((notice) => <article className={`notification-row${notice.unread ? " is-unread" : ""}`} key={notice.title}><ServiceIllustration type={notice.icon} size="sm" /><div><strong>{notice.title}</strong><p>{notice.description}</p><small><Icon name="clock" size={13} />{notice.time}</small></div>{notice.unread && <i className="notification-unread" />}</article>)}</section></div>;
 }
 
-function ServiceView({ service, onBack, onToast }: { service: Service; onBack: () => void; onToast: (message: string) => void }) {
+function ServiceView({
+  service,
+  onBack,
+  onToast,
+  onRegister,
+}: {
+  service: Service;
+  onBack: () => void;
+  onToast: (message: string) => void;
+  onRegister: (info: { car: string; problem: string; lat: number; lng: number }) => void;
+}) {
   const [car, setCar] = useState("پژو ۲۰۷ پانوراما · ۱۴۰۱");
-  const [address, setAddress] = useState("خانه · سعادت‌آباد، تهران");
-  const [date, setDate] = useState("");
-  function submit(event: FormEvent<HTMLFormElement>) { event.preventDefault(); onToast(`درخواست «${service.name}» ثبت شد؛ به‌زودی با شما تماس می‌گیریم.`); }
-  return <div className="subpage"><PageTitle title={service.name} subtitle={`ثبت درخواست ${service.name} با چند قدم ساده`} onBack={onBack} />
-    <div className="service-detail-layout"><section className={`service-detail-intro service-detail-intro--${service.id}`}><div className="service-detail-art"><ServiceIllustration type={service.id} size="lg" /></div><span className="detail-label">خدمت هوشمند خودرو چاره</span><h2>{service.name}<br /><em>درست همین‌جا.</em></h2><p>سرویس موردنیازت را ثبت کن تا متخصصان تأییدشدهٔ خودرو چاره در کنارت باشند.</p><div className="detail-benefits"><span><Icon name="shield" size={15} />کارشناس تأییدشده</span><span><Icon name="clock" size={15} />پاسخ‌گویی سریع</span><span><Icon name="check" size={15} />قیمت شفاف</span></div></section>
-      <section className="panel-card service-request-card"><div className="request-heading"><span>درخواست خدمت</span><h2>چند قدم تا آرامش</h2><p>اطلاعات را کامل کن؛ ما ادامهٔ مسیر را می‌سازیم.</p></div><form className="service-request-form" onSubmit={submit}><label className="form-field"><span className="field-label">خودرو</span><span className="field-control"><select value={car} onChange={(event) => setCar(event.target.value)}><option>پژو ۲۰۷ پانوراما · ۱۴۰۱</option><option>پراید ۱۳۱ · ۱۳۹۸</option><option>سایر خودروها</option></select><Icon name="chevron" size={15} /></span></label><label className="form-field"><span className="field-label">آدرس دریافت خدمت</span><span className="field-control"><select value={address} onChange={(event) => setAddress(event.target.value)}><option>خانه · سعادت‌آباد، تهران</option><option>محل کار · ونک، تهران</option><option>آدرس دیگر</option></select><Icon name="chevron" size={15} /></span></label><label className="form-field"><span className="field-label">زمان پیشنهادی</span><span className="field-control"><input type="datetime-local" value={date} onChange={(event) => setDate(event.target.value)} /></span></label><label className="form-field"><span className="field-label">توضیحات (اختیاری)</span><span className="field-control"><input placeholder="اگر نکته‌ای هست، برایمان بنویس…" /></span></label><div className="request-footnote"><Icon name="shield" size={15} />قیمت نهایی پیش از تأیید با شما هماهنگ می‌شود.</div><button className="primary-button request-submit" type="submit">ثبت درخواست خدمت <Icon name="arrow-left" size={17} /></button></form></section></div>
-  </div>;
+  const [problem, setProblem] = useState("");
+  const [coords, setCoords] = useState<{ lat: number; lng: number } | null>(null);
+  const specialist = service.id === "roadside" || service.id === "transport" ? "امدادگر" : "متخصص";
+
+  function submit(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    onRegister({ car, problem, lat: coords?.lat ?? 35.6892, lng: coords?.lng ?? 51.389 });
+  }
+
+  return (
+    <div className="subpage">
+      <PageTitle title={service.name} subtitle={`ثبت درخواست ${service.name} با چند قدم ساده`} onBack={onBack} />
+
+      <section className="service-hero">
+        <Image src="/slides/service-hero.jpg" alt="" fill sizes="(max-width: 900px) 100vw, 1320px" className="service-hero-image" />
+        <span className="service-hero-veil" aria-hidden="true" />
+        <div className="service-hero-copy">
+          <span className="service-hero-tag"><Icon name="sparkles" size={13} /> خدمت هوشمند خودرو چاره</span>
+          <h2>از ثبت موقعیت تا رسیدن {specialist}، فقط چند دقیقه</h2>
+          <p>بعد از ثبت مبدأ، نزدیک‌ترین و مناسب‌ترین {specialist} را به‌صورت هوشمند پیدا می‌کنیم و به سمتت می‌فرستیم؛ با قیمت منصفانه و بدون واسطه.</p>
+          <div className="service-hero-chips">
+            <span className="hero-chip hero-chip--one"><Icon name="pin" size={13} /> نزدیک‌ترین {specialist}</span>
+            <span className="hero-chip hero-chip--two"><Icon name="clock" size={13} /> حداکثر ۱۰ دقیقه</span>
+            <span className="hero-chip hero-chip--three"><Icon name="tag" size={13} /> قیمت منصفانه</span>
+            <span className="hero-chip hero-chip--four"><Icon name="shield" size={13} /> پرداخت آنلاین امن</span>
+            <span className="hero-chip hero-chip--five"><Icon name="check" size={13} /> اتوماسیون هوشمند، بدون کلاهبرداری</span>
+          </div>
+        </div>
+      </section>
+
+      <section className="panel-card service-request-card">
+        <div className="request-heading">
+          <span>درخواست خدمت</span>
+          <h2>خودرو و مشکل را مشخص کن</h2>
+          <p>موقعیت دریافت خدمت را روی نقشه انتخاب کن؛ بقیه‌اش با ما.</p>
+        </div>
+        <form className="service-request-form" onSubmit={submit}>
+          <div className="service-request-grid">
+            <div className="request-fields">
+              <label className="form-field">
+                <span className="field-label">خودروی شما</span>
+                <span className="field-control">
+                  <select value={car} onChange={(event) => setCar(event.target.value)}>
+                    <option>پژو ۲۰۷ پانوراما · ۱۴۰۱</option>
+                    <option>پراید ۱۳۱ · ۱۳۹۸</option>
+                    <option>سایر خودروها</option>
+                  </select>
+                  <Icon name="chevron" size={15} />
+                </span>
+              </label>
+              <label className="form-field">
+                <span className="field-label">مشکل خودرو</span>
+                <span className="field-control field-control--area">
+                  <textarea value={problem} onChange={(event) => setProblem(event.target.value)} placeholder="مثلاً: ماشین روشن نمی‌شود یا پنچر شده‌ام..." rows={4} required />
+                </span>
+              </label>
+              <div className="request-footnote"><Icon name="shield" size={15} />پرداخت آنلاین و امن پس از انجام خدمت؛ قیمت مصوب و بدون کلاهبرداری.</div>
+            </div>
+            <div className="request-map">
+              <span className="field-label">موقعیت دریافت خدمت</span>
+              <LocationPickerMap onPick={(lat, lng) => setCoords({ lat, lng })} onToast={onToast} />
+            </div>
+          </div>
+          <button className="primary-button request-submit" type="submit">ثبت درخواست خدمت <Icon name="arrow-left" size={17} /></button>
+        </form>
+      </section>
+    </div>
+  );
+}
+
+function WaitingView({
+  request,
+  onCancel,
+  onToast,
+}: {
+  request: { service: Service; car: string; problem: string; lat: number; lng: number };
+  onCancel: () => void;
+  onToast: (message: string) => void;
+}) {
+  const [phase, setPhase] = useState<"searching" | "assigned" | "moving" | "arrived">("searching");
+  const [eta, setEta] = useState(10);
+  const [progress, setProgress] = useState(0);
+  const specialist = request.service.id === "roadside" || request.service.id === "transport" ? "امدادگر" : "متخصص";
+
+  useEffect(() => {
+    const found = window.setTimeout(() => setPhase("assigned"), 3200);
+    const moving = window.setTimeout(() => setPhase("moving"), 4400);
+    return () => {
+      window.clearTimeout(found);
+      window.clearTimeout(moving);
+    };
+  }, []);
+
+  useEffect(() => {
+    if (phase !== "moving") return;
+    const timer = window.setInterval(() => {
+      setEta((value) => {
+        if (value <= 1) {
+          window.clearInterval(timer);
+          setPhase("arrived");
+          return 0;
+        }
+        return value - 1;
+      });
+      setProgress((value) => Math.min(1, value + 0.11));
+    }, 1400);
+    return () => window.clearInterval(timer);
+  }, [phase]);
+
+  const statusText =
+    phase === "searching"
+      ? `در حال جستجوی نزدیک‌ترین ${specialist}...`
+      : phase === "assigned"
+        ? `${specialist} انتخاب شد؛ آمادهٔ حرکت به سمت شماست.`
+        : phase === "moving"
+          ? `${specialist} در مسیر شماست...`
+          : `${specialist} به شما رسید. سرویس آغاز می‌شود.`;
+
+  return (
+    <div className="waiting-page">
+      <div className="page-title-row waiting-title-row">
+        <div className="page-title-main">
+          <button className="back-button" type="button" onClick={onCancel} aria-label="بازگشت"><Icon name="arrow-right" size={19} /></button>
+          <div><h1>در حال اعزام {specialist}</h1><p>{request.service.name} · {request.car}</p></div>
+        </div>
+      </div>
+
+      <div className="waiting-map">
+        <TrackingMap lat={request.lat} lng={request.lng} progress={progress} />
+        {phase === "searching" && <div className="waiting-radar" aria-hidden="true"><span /><span /><span /></div>}
+      </div>
+
+      <section className="waiting-sheet">
+        <div className="waiting-status-row">
+          <span className={`waiting-live-dot${phase === "arrived" ? " is-done" : ""}`} />
+          <strong>{statusText}</strong>
+          {phase === "moving" && <span className="waiting-eta">تا {eta} دقیقه</span>}
+          {phase === "assigned" && <span className="waiting-eta">در حال آماده‌سازی</span>}
+          {phase === "arrived" && <span className="waiting-eta waiting-eta--done">انجام شد</span>}
+        </div>
+        <div className="waiting-progress" role="progressbar" aria-valuenow={Math.round(progress * 100)} aria-valuemin={0} aria-valuemax={100}>
+          <span className="waiting-progress-fill" style={{ width: `${Math.max(6, progress * 100)}%` }} />
+        </div>
+
+        <ol className="waiting-steps">
+          <li className="is-done"><Icon name="check" size={13} /> ثبت درخواست</li>
+          <li className={phase === "searching" ? "is-active" : "is-done"}>{phase === "searching" ? "◌" : <Icon name="check" size={13} />} جستجوی {specialist}</li>
+          <li className={phase === "moving" ? "is-active" : phase === "arrived" ? "is-done" : ""}>{phase === "arrived" ? <Icon name="check" size={13} /> : "◌"} حرکت به سمت شما</li>
+          <li className={phase === "arrived" ? "is-active" : ""}>◌ پرداخت امن</li>
+        </ol>
+
+        <article className={`driver-card${phase === "searching" ? " is-pending" : ""}`}>
+          <span className="driver-avatar" aria-hidden="true">{phase === "searching" ? "" : "ر‌م"}</span>
+          <div className="driver-info">
+            <strong>{phase === "searching" ? "در حال یافتن بهترین گزینه..." : "رضا محمدی"}</strong>
+            <small>{phase === "searching" ? "هوشمندترین انتخاب، نزدیک‌ترین مسیر" : `${specialist} تأییدشده · امتیاز ۴.۹`}</small>
+            {phase !== "searching" && <span className="driver-vehicle"><Icon name="car" size={13} /> ون امداد · ایران ۴۶ ط ۲۳۴</span>}
+          </div>
+          <div className="driver-side">
+            <strong>{phase === "searching" ? "—" : "۲۵۰٬۰۰۰"} <small>تومان</small></strong>
+            <small>هزینهٔ تخمینی</small>
+            {phase !== "searching" && (
+              <button type="button" className="driver-call" onClick={() => onToast("تماس با امدادگر در نسخهٔ کامل فعال می‌شود.")}>
+                <Icon name="phone" size={14} /> تماس
+              </button>
+            )}
+          </div>
+        </article>
+
+        <div className="waiting-note"><Icon name="shield" size={14} /> پرداخت آنلاین و امن پس از انجام خدمت؛ بدون واسطه و کلاهبرداری.</div>
+        <button type="button" className="waiting-cancel" onClick={onCancel}>انصراف از درخواست</button>
+      </section>
+    </div>
+  );
 }
 
 function AIChat({ open, setOpen }: { open: boolean; setOpen: (open: boolean) => void }) {
@@ -495,6 +674,7 @@ export default function Dashboard() {
   const [username, setUsername] = useState("arman");
   const [userPhone, setUserPhone] = useState("");
   const [balance, setBalance] = useState(1250000);
+  const [request, setRequest] = useState<{ service: Service; car: string; problem: string; lat: number; lng: number } | null>(null);
 
   useEffect(() => {
     const refreshProfile = () => {
@@ -591,7 +771,10 @@ export default function Dashboard() {
     case "invite": content = <InviteView onBack={() => navigate("home")} onToast={notify} />; break;
     case "support": content = <SupportView onBack={() => navigate("home")} onToast={notify} />; break;
     case "notifications": content = <NotificationsView onBack={() => navigate("home")} onToast={notify} />; break;
-    case "service": content = <ServiceView service={selectedService} onBack={() => navigate("home")} onToast={notify} />; break;
+    case "service": content = <ServiceView service={selectedService} onBack={() => navigate("home")} onToast={notify} onRegister={(info) => { setRequest({ service: selectedService, ...info }); navigate("waiting"); }} />; break;
+    case "waiting": content = request
+      ? <WaitingView request={request} onToast={notify} onCancel={() => { setRequest(null); navigate("home"); notify("درخواست شما لغو شد."); }} />
+      : <HomeView balance={balance} onService={openService} onNavigate={navigate} onToast={notify} />; break;
     default: content = <HomeView balance={balance} onService={openService} onNavigate={navigate} onToast={notify} />;
   }
 
