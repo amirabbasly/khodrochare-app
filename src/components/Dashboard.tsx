@@ -4,7 +4,7 @@ import Image from "next/image";
 import { useEffect, useState, type FormEvent, type ReactNode } from "react";
 import { useRouter } from "next/navigation";
 import { BrandLogo, Icon } from "@/components/Icons";
-import { AiMascot, MiniCar, ServicesScene3D } from "@/components/Artwork";
+import { AiMascot, MiniCar } from "@/components/Artwork";
 import { MoreDots3D, ServiceIllustration, type ServiceId } from "@/components/ServiceIllustration";
 
 type View =
@@ -270,7 +270,7 @@ function HomeView({
 
       <section className="bento-stats" aria-label="خلاصه وضعیت خودرو و خدمات">
         <button className="bento-main" type="button" onClick={() => onNavigate("history")}>
-          <span className="bento-main-scene"><ServicesScene3D /></span>
+          <span className="bento-main-scene"><Image src="/slides/scene-iran-map.jpg" alt="" fill sizes="(max-width: 900px) 100vw, 780px" className="bento-main-image" /></span>
           <span className="bento-main-veil" aria-hidden="true" />
           <div className="bento-main-copy">
             <span className="bento-main-label"><i className="live-dot" /> وضعیت آخرین خدمت - امداد خودرو</span>
@@ -280,6 +280,7 @@ function HomeView({
             </span>
             <span className="bento-main-meta">درخواست امروز · ۱۰:۴۲ · تا ۲۵ دقیقه دیگر</span>
           </div>
+          <span className="bento-scene-caption">همراه مطمئن شما از خرید تا تأمین خدمات خودرو</span>
         </button>
 
         <div className="bento-stack">
