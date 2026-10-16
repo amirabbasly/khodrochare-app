@@ -1,4 +1,4 @@
-const CACHE_NAME = "khodro-chare-shell-v3";
+const CACHE_NAME = "khodro-chare-shell-v4";
 const APP_SHELL = [
   "/",
   "/register",
@@ -60,18 +60,17 @@ self.addEventListener("fetch", (event) => {
 
   if (!isStaticAsset) return;
 
+  // Network-first for every asset: a stale cached bundle must never win over a
+  // fresh one (mixed old/new chunks break React after deploys and in dev).
   event.respondWith(
-    caches.match(request).then((cached) => {
-      const networkRequest = fetch(request)
-        .then((response) => {
-          if (response.ok) {
-            const copy = response.clone();
-            caches.open(CACHE_NAME).then((cache) => cache.put(request, copy));
-          }
-          return response;
-        })
-        .catch(() => cached);
-      return cached || networkRequest;
-    }),
+    fetch(request)
+      .then((response) => {
+        if (response.ok) {
+          const copy = response.clone();
+          caches.open(CACHE_NAME).then((cache) => cache.put(request, copy));
+        }
+        return response;
+      })
+      .catch(async () => (await caches.match(request)) || Response.error()),
   );
 });
