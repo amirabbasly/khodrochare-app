@@ -490,6 +490,7 @@ function ServiceView({
   const [car, setCar] = useState("پژو ۲۰۷ پانوراما · ۱۴۰۱");
   const [problem, setProblem] = useState("");
   const [coords, setCoords] = useState<{ lat: number; lng: number } | null>(null);
+  const [noticeOpen, setNoticeOpen] = useState(true);
 
   function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -497,7 +498,8 @@ function ServiceView({
   }
 
   return (
-    <div className="subpage">
+    <>
+      <div className="subpage">
       <PageTitle title={service.name} subtitle={`ثبت درخواست ${service.name} با چند قدم ساده`} onBack={onBack} />
 
       <section className="service-hero">
@@ -536,7 +538,6 @@ function ServiceView({
                   <textarea value={problem} onChange={(event) => setProblem(event.target.value)} placeholder="مثلاً: ماشین روشن نمی‌شود یا پنچر شده‌ام..." rows={4} required />
                 </span>
               </label>
-              <TrustWarning />
             </div>
             <div className="request-map">
               <span className="field-label">موقعیت دریافت خدمت</span>
@@ -546,7 +547,22 @@ function ServiceView({
           <button className="primary-button request-submit" type="submit">ثبت درخواست خدمت <Icon name="arrow-left" size={17} /></button>
         </form>
       </section>
-    </div>
+      </div>
+
+      {noticeOpen && (
+        <div className="modal-overlay" role="dialog" aria-modal="true" aria-labelledby="trust-modal-title" onClick={() => setNoticeOpen(false)}>
+          <div className="modal-box" onClick={(event) => event.stopPropagation()}>
+            <span className="modal-icon"><Icon name="shield" size={24} /></span>
+            <h3 id="trust-modal-title">نکته مهم امنیتی</h3>
+            <p>
+              برای امنیت و آرامش شما، لطفاً فقط از امدادگرانی استفاده کنید که آرم و علائم رسمی خودرو چاره را دارند.
+              تنها خدمات این امدادگران شامل گارانتی، پیگیری و حمایت کامل شرکت است؛ لطفاً از پذیرش امدادگران آزاد و بدون نشان خودداری کنید.
+            </p>
+            <button type="button" className="modal-confirm-btn" onClick={() => setNoticeOpen(false)}>فهمیدم</button>
+          </div>
+        </div>
+      )}
+    </>
   );
 }
 
