@@ -4,8 +4,8 @@ import Image from "next/image";
 import { useEffect, useState, type FormEvent, type ReactNode } from "react";
 import { useRouter } from "next/navigation";
 import { BrandLogo, Icon } from "@/components/Icons";
-import { MiniCar } from "@/components/Artwork";
-import { ServiceIllustration, type ServiceId } from "@/components/ServiceIllustration";
+import { AiMascot, MiniCar } from "@/components/Artwork";
+import { MoreDots3D, ServiceIllustration, type ServiceId } from "@/components/ServiceIllustration";
 
 type View =
   | "home"
@@ -206,43 +206,24 @@ function HeroSlider({ onService, onExplore }: { onService: (service: Service) =>
   );
 }
 
-function BannerSlider({ onAction }: { onAction: (index: number) => void }) {
-  const [current, setCurrent] = useState(0);
-  const total = bannerSlides.length;
-
-  useEffect(() => {
-    const timer = window.setInterval(() => setCurrent((index) => (index + 1) % total), 7000);
-    return () => window.clearInterval(timer);
-  }, [total]);
-
+function BannerStrip({ onAction }: { onAction: (index: number) => void }) {
   return (
-    <section className="banner-slider" aria-roledescription="carousel" aria-label="چاره‌های بیشتر برای ماشینت">
-      <div className="banner-slider-track">
+    <section className="banner-strip-section" aria-label="پیشنهادهای ویژه خودرو چاره">
+      <SectionTitle title="چاره‌های بیشتر برای ماشینت" caption="برای دیدن همهٔ پیشنهادها، افقی اسکرول کن." />
+      <div className="banner-strip">
         {bannerSlides.map((slide, index) => (
-          <article key={slide.id} className={`banner-slide${index === current ? " is-active" : ""}`} aria-hidden={index !== current}>
-            <Image src={slide.image} alt="" fill sizes="(max-width: 760px) 100vw, 1320px" className="banner-slide-image" />
-            <div className="banner-slide-veil" />
-            <div className="banner-slide-copy">
-              <span className="banner-slide-tag">{slide.tag}</span>
+          <article key={slide.id} className="banner-strip-card">
+            <Image src={slide.image} alt="" fill sizes="(max-width: 640px) 80vw, 380px" className="banner-strip-image" />
+            <div className="banner-strip-veil" />
+            <div className="banner-strip-copy">
+              <span className="banner-strip-tag">{slide.tag}</span>
               <h3>{slide.title}</h3>
               <p>{slide.description}</p>
-              <button className="banner-slide-link" type="button" tabIndex={index === current ? 0 : -1} onClick={() => onAction(index)}>
-                بیشتر ببین <Icon name="arrow-left" size={15} />
+              <button className="banner-slide-link" type="button" onClick={() => onAction(index)}>
+                بیشتر ببین <Icon name="arrow-left" size={14} />
               </button>
             </div>
           </article>
-        ))}
-      </div>
-      <div className="banner-slider-bullets">
-        {bannerSlides.map((slide, index) => (
-          <button
-            key={slide.id}
-            type="button"
-            className={`slider-bullet${index === current ? " is-active" : ""}`}
-            aria-label={`اسلاید ${index + 1} از ${total}`}
-            aria-current={index === current}
-            onClick={() => setCurrent(index)}
-          />
         ))}
       </div>
     </section>
@@ -275,46 +256,44 @@ function HomeView({
 
   return (
     <div className="home-content">
-      <HeroSlider onService={onService} onExplore={() => document.getElementById("services")?.scrollIntoView({ behavior: "smooth" })} />
-
-      <section className="home-stats" aria-label="خلاصه وضعیت حساب و خودرو">
-        <button className="stat-cell" type="button" onClick={() => onNavigate("wallet")}>
-          <span className="stat-icon"><ServiceIllustration type="wallet" size="sm" /></span>
-          <span className="stat-copy">
-            <small>موجودی کیف پول</small>
-            <strong>{balance.toLocaleString("fa-IR")}</strong>
-            <em>تومان</em>
-          </span>
+      <section className="wallet-strip" aria-label="موجودی کیف پول">
+        <span className="wallet-strip-icon"><ServiceIllustration type="wallet" size="md" /></span>
+        <div className="wallet-strip-copy">
+          <small>موجودی کیف پول</small>
+          <strong>{balance.toLocaleString("fa-IR")} <em>تومان</em></strong>
+        </div>
+        <button className="wallet-strip-cta" type="button" onClick={() => onNavigate("wallet")}>
+          افزایش موجودی <Icon name="plus" size={15} />
         </button>
+        <span className="wallet-strip-glow" aria-hidden="true" />
+      </section>
 
-        <button className="stat-cell stat-cell--status" type="button" onClick={() => onNavigate("history")}>
-          <span className="stat-icon"><ServiceIllustration type="roadside" size="sm" delay={0.3} /></span>
-          <span className="stat-copy">
-            <small>آخرین خدمت · امداد خودرو</small>
-            <span className="stat-progress" role="progressbar" aria-valuenow={50} aria-valuemin={0} aria-valuemax={100} aria-label="پیشرفت آخرین خدمت">
-              <span className="stat-progress-fill" />
+      <section className="bento-stats" aria-label="خلاصه وضعیت خودرو و خدمات">
+        <button className="bento-main" type="button" onClick={() => onNavigate("history")}>
+          <Image src="/slides/hero-roadside.jpg" alt="" fill sizes="(max-width: 900px) 100vw, 62vw" className="bento-main-image" />
+          <span className="bento-main-veil" aria-hidden="true" />
+          <span className="bento-chip bento-chip--one" aria-hidden="true"><Icon name="clock" size={12} /> در حال انجام</span>
+          <span className="bento-chip bento-chip--two" aria-hidden="true"><Icon name="pin" size={12} /> ۲.۴ کیلومتری شما</span>
+          <div className="bento-main-copy">
+            <span className="bento-main-label"><i className="live-dot" /> آخرین خدمت · امداد خودرو</span>
+            <strong>امدادگر در مسیر ...</strong>
+            <span className="bento-progress" role="progressbar" aria-valuenow={50} aria-valuemin={0} aria-valuemax={100} aria-label="پیشرفت آخرین خدمت">
+              <span className="bento-progress-fill" />
             </span>
-            <em className="stat-status-text">امدادگر در مسیر ...</em>
-          </span>
+            <span className="bento-main-meta">درخواست امروز · ۱۰:۴۲ · تا ۲۵ دقیقه دیگر</span>
+          </div>
         </button>
 
-        <button className="stat-cell" type="button" onClick={() => onService(services[9])}>
-          <span className="stat-icon"><ServiceIllustration type="reminder" size="sm" delay={0.6} /></span>
-          <span className="stat-copy">
-            <small>سرویس دوره‌ای</small>
-            <strong>۴۵</strong>
-            <em>روز باقی‌مانده</em>
-          </span>
-        </button>
-
-        <button className="stat-cell" type="button" onClick={() => onService(services[9])}>
-          <span className="stat-icon"><ServiceIllustration type="oil" size="sm" delay={0.9} /></span>
-          <span className="stat-copy">
-            <small>سرویس روغن</small>
-            <strong>۱۲</strong>
-            <em>روز باقی‌مانده</em>
-          </span>
-        </button>
+        <div className="bento-stack">
+          <button className="bento-mini" type="button" onClick={() => onService(services[9])}>
+            <span className="bento-mini-icon"><ServiceIllustration type="reminder" size="sm" delay={0.25} /></span>
+            <span className="bento-mini-copy"><small>سرویس دوره‌ای</small><strong>۴۵ <em>روز</em></strong><span>باقی‌مانده</span></span>
+          </button>
+          <button className="bento-mini" type="button" onClick={() => onService(services[9])}>
+            <span className="bento-mini-icon"><ServiceIllustration type="oil" size="sm" delay={0.55} /></span>
+            <span className="bento-mini-copy"><small>سرویس روغن</small><strong>۱۲ <em>روز</em></strong><span>باقی‌مانده</span></span>
+          </button>
+        </div>
       </section>
 
       <section className="main-services-section">
@@ -325,24 +304,30 @@ function HomeView({
               <span className="main-service-art"><ServiceIllustration type={service.id} size="lg" delay={index * 0.35} /></span>
               <strong>{service.name}</strong>
               <small>{service.note}</small>
-              <span className="main-service-cta">درخواست خدمت <Icon name="arrow-left" size={13} /></span>
             </button>
           ))}
         </div>
       </section>
 
-      <BannerSlider onAction={(index) => (index === 0 ? onNavigate("market") : index === 1 ? onNavigate("hall") : index === 3 ? onService(services[4]) : onToast("پوشش خودرو چاره: تهران، کرج و کل شمال کشور"))} />
+      <HeroSlider onService={onService} onExplore={() => document.getElementById("services")?.scrollIntoView({ behavior: "smooth" })} />
 
       <section className="services-section" id="services">
         <SectionTitle
           title="بقیه خدمات"
           caption="هر نیازی، فقط با چند لمس فاصله دارد."
-          action={<span className="service-count"><Icon name="sparkles" size={12} /> {moreServices.length} خدمت دیگر</span>}
+          action={<span className="service-count"><Icon name="sparkles" size={12} /> {moreServices.length + 1} خدمت دیگر</span>}
         />
-        <div className="services-grid">{moreServices.map((service, index) => <ServiceCard key={service.id} service={service} onClick={() => onService(service)} delay={index * 0.18} />)}</div>
+        <div className="services-grid">
+          {moreServices.map((service, index) => <ServiceCard key={service.id} service={service} onClick={() => onService(service)} delay={index * 0.18} />)}
+          <button className="service-card service-card--more" type="button" onClick={() => onToast("به‌زودی خدمات بیشتری به خودرو چاره اضافه می‌شود")}>
+            <MoreDots3D delay={0.4} />
+            <span className="service-name">بیشتر</span>
+            <span className="service-note">به‌زودی بیشتر</span>
+          </button>
+        </div>
       </section>
 
-      <p className="home-footnote"><Icon name="shield" size={14} /> خودرو چاره، همراه مطمئن تو در مسیرهای زندگی.</p>
+      <BannerStrip onAction={(index) => (index === 0 ? onNavigate("market") : index === 1 ? onNavigate("hall") : index === 3 ? onService(services[4]) : onToast("پوشش خودرو چاره: تهران، کرج و کل شمال کشور"))} />
     </div>
   );
 }
@@ -496,7 +481,7 @@ function AIChat({ open, setOpen }: { open: boolean; setOpen: (open: boolean) => 
   }
   return <>
     {open && <section className="chat-window" aria-label="گفت‌وگو با چاره‌یار"><div className="chat-header"><span className="chat-avatar"><span>AI</span></span><div><strong>چاره‌یار</strong><small><i />همراه هوشمند تو</small></div><button type="button" onClick={() => setOpen(false)} aria-label="بستن گفت‌وگو"><Icon name="close" size={19} /></button></div><div className="chat-messages">{messages.map((message, index) => <p key={`${message.from}-${index}`} className={`chat-bubble${message.from === "user" ? " chat-bubble--user" : ""}`}>{message.text}</p>)}</div><form className="chat-input-row" onSubmit={send}><input value={text} onChange={(event) => setText(event.target.value)} placeholder="پیامت را بنویس…" aria-label="پیام شما" /><button type="submit" aria-label="ارسال پیام"><Icon name="send" size={17} /></button></form><div className="chat-demo-note">همراه هوشمند خودرو چاره</div></section>}
-    <button className={`ai-fab${open ? " ai-fab--open" : ""}`} type="button" onClick={() => setOpen(!open)} aria-label={open ? "بستن چاره‌یار" : "گفت‌وگو با هوش مصنوعی"}><span className="ai-fab-stars"><i><Icon name="sparkles" size={13} /></i><b>AI</b></span><span className="ai-fab-copy">چاره‌یار <small>پشتیبانی هوشمند</small></span>{open ? <Icon name="close" size={18} /> : <span className="ai-fab-spark"><Icon name="sparkles" size={16} /></span>}</button>
+    <button className={`ai-fab${open ? " ai-fab--open" : ""}`} type="button" onClick={() => setOpen(!open)} aria-label={open ? "بستن چاره‌یار" : "گفت‌وگو با هوش مصنوعی"}><span className="ai-fab-mascot"><AiMascot /></span><span className="ai-fab-copy">چاره‌یار <small>پشتیبانی هوشمند</small></span>{open ? <Icon name="close" size={18} /> : <span className="ai-fab-spark"><Icon name="sparkles" size={16} /></span>}</button>
   </>;
 }
 

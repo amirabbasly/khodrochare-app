@@ -502,3 +502,37 @@ export function ServiceIllustration({
     </span>
   );
 }
+
+export function MoreDots3D({ size = "md", delay = 0 }: { size?: "sm" | "md" | "lg"; delay?: number }) {
+  return (
+    <span className={`service-art3d service-art3d--more service-art3d--${size}`} style={{ animationDelay: `${delay}s` }} aria-hidden="true">
+      <svg viewBox="0 0 64 64" width="100%" height="100%" fill="none">
+        <defs>
+          <linearGradient id="g3d-more-dot" x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0" stopColor="#FFC98F" />
+            <stop offset="1" stopColor="#E07222" />
+          </linearGradient>
+          <linearGradient id="g3d-more-dot2" x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0" stopColor="#5A7B95" />
+            <stop offset="1" stopColor="#253D51" />
+          </linearGradient>
+        </defs>
+        <ellipse cx="32" cy="50" rx="19" ry="4.2" fill="#0F2233" opacity=".13" />
+        <g className="more-dots">
+          <g className="more-dot more-dot--one">
+            <circle cx="17" cy="33" r="7.2" fill="url(#g3d-more-dot)" />
+            <circle cx="14.9" cy="30.6" r="2.2" fill="#FFE7C8" opacity=".85" />
+          </g>
+          <g className="more-dot more-dot--two">
+            <circle cx="32" cy="33" r="7.2" fill="url(#g3d-more-dot2)" />
+            <circle cx="29.9" cy="30.6" r="2.2" fill="#C5DAEA" opacity=".8" />
+          </g>
+          <g className="more-dot more-dot--three">
+            <circle cx="47" cy="33" r="7.2" fill="url(#g3d-more-dot)" />
+            <circle cx="44.9" cy="30.6" r="2.2" fill="#FFE7C8" opacity=".85" />
+          </g>
+        </g>
+      </svg>
+    </span>
+  );
+}

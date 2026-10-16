@@ -18,3 +18,34 @@ export function MiniCar({ variant = "silver" }: { variant?: "silver" | "orange" 
     </svg>
   );
 }
+
+export function AiMascot() {
+  return (
+    <svg className="ai-mascot" viewBox="0 0 48 48" fill="none" aria-hidden="true">
+      <defs>
+        <linearGradient id="ai-bot-head" x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0" stopColor="#FFE6C9" />
+          <stop offset="1" stopColor="#FFB27B" />
+        </linearGradient>
+        <linearGradient id="ai-bot-face" x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0" stopColor="#2A4A60" />
+          <stop offset="1" stopColor="#142C3B" />
+        </linearGradient>
+      </defs>
+      <path d="M24 11 V6.5" stroke="#FFD3A6" strokeWidth="2.2" strokeLinecap="round" />
+      <circle className="ai-mascot-orb" cx="24" cy="4.6" r="3.1" fill="#FF9A52" />
+      <rect x="5.2" y="20" width="5.6" height="12.5" rx="2.8" fill="#FF9A52" />
+      <rect x="37.2" y="20" width="5.6" height="12.5" rx="2.8" fill="#FF9A52" />
+      <rect x="9" y="11.5" width="30" height="26.5" rx="11" fill="url(#ai-bot-head)" />
+      <path d="M12.5 15.5 a9 9 0 0 1 7-3.2" stroke="#FFF1DE" strokeWidth="1.6" strokeLinecap="round" opacity=".8" />
+      <rect x="13" y="16.5" width="22" height="16.5" rx="8.2" fill="url(#ai-bot-face)" />
+      <g className="ai-mascot-eyes">
+        <rect x="17.4" y="21.8" width="4.5" height="5.8" rx="2.25" fill="#7FD8FF" />
+        <rect x="26.1" y="21.8" width="4.5" height="5.8" rx="2.25" fill="#7FD8FF" />
+      </g>
+      <path className="ai-mascot-smile" d="M20.6 30.6 h6.8" stroke="#7FD8FF" strokeWidth="2" strokeLinecap="round" />
+      <path className="ai-mascot-spark ai-mascot-spark--one" d="M42 7.5 l1 2.1 2.1 1-2.1 1-1 2.1-1-2.1-2.1-1 2.1-1 Z" fill="#FFD9A6" />
+      <path className="ai-mascot-spark ai-mascot-spark--two" d="M6.2 10.2 l.8 1.7 1.7.8-1.7.8-.8 1.7-.8-1.7-1.7-.8 1.7-.8 Z" fill="#FFD9A6" />
+    </svg>
+  );
+}
