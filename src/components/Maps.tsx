@@ -194,3 +194,37 @@ export function TrackingMap({
 
   return <div ref={containerRef} className="map-canvas" />;
 }
+
+export function UserPinMap({ lat, lng }: { lat: number; lng: number }) {
+  const containerRef = useRef<HTMLDivElement>(null);
+  const mapRef = useRef<import("leaflet").Map | null>(null);
+
+  useEffect(() => {
+    let disposed = false;
+
+    async function init() {
+      const L = await import("leaflet");
+      if (disposed || !containerRef.current || mapRef.current) return;
+      const map = new L.Map(containerRef.current, {
+        center: [lat, lng],
+        zoom: 15,
+        zoomControl: false,
+        attributionControl: false,
+        preferCanvas: true,
+      });
+      L.tileLayer("https://tile.openstreetmap.org/{z}/{x}/{y}.png", { maxZoom: 19 }).addTo(map);
+      L.marker([lat, lng], { icon: brandPin(L) }).addTo(map);
+      mapRef.current = map;
+      window.setTimeout(() => map.invalidateSize(), 220);
+    }
+
+    init();
+    return () => {
+      disposed = true;
+      mapRef.current?.remove();
+      mapRef.current = null;
+    };
+  }, [lat, lng]);
+
+  return <div ref={containerRef} className="map-canvas" aria-label="موقعیت شما روی نقشه" />;
+}

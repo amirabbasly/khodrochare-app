@@ -5,7 +5,7 @@ import { useEffect, useState, type FormEvent, type ReactNode } from "react";
 import { useRouter } from "next/navigation";
 import { BrandLogo, Icon } from "@/components/Icons";
 import { AiMascot, MiniCar } from "@/components/Artwork";
-import { LocationPickerMap, TrackingMap } from "@/components/Maps";
+import { LocationPickerMap, UserPinMap } from "@/components/Maps";
 import { MoreDots3D, ServiceIllustration, type ServiceId } from "@/components/ServiceIllustration";
 
 type View =
@@ -462,6 +462,20 @@ function NotificationsView({ onBack, onToast }: { onBack: () => void; onToast: (
   return <div className="subpage"><PageTitle title="اعلان‌ها" subtitle="خبرهای تازه و یادآورهای خودروی تو." onBack={onBack} action={<button className="text-link" type="button" onClick={() => onToast("همهٔ اعلان‌ها خوانده شدند")}>خواندن همه</button>} /><section className="panel-card notification-list">{notices.map((notice) => <article className={`notification-row${notice.unread ? " is-unread" : ""}`} key={notice.title}><ServiceIllustration type={notice.icon} size="sm" /><div><strong>{notice.title}</strong><p>{notice.description}</p><small><Icon name="clock" size={13} />{notice.time}</small></div>{notice.unread && <i className="notification-unread" />}</article>)}</section></div>;
 }
 
+const faDigits = (value: string) => value.replace(/[0-9]/g, (digit) => "۰۱۲۳۴۵۶۷۸۹"[Number(digit)]);
+
+function TrustWarning() {
+  return (
+    <div className="trust-warning">
+      <Icon name="shield" size={15} />
+      <p>
+        <strong>توجه:</strong> برای امنیت و آرامش شما، لطفاً فقط از امدادگرانی استفاده کنید که آرم و علائم رسمی خودرو چاره را دارند.
+        تنها خدمات این امدادگران شامل گارانتی، پیگیری و حمایت کامل شرکت است؛ لطفاً از پذیرش امدادگران آزاد و بدون نشان خودداری کنید.
+      </p>
+    </div>
+  );
+}
+
 function ServiceView({
   service,
   onBack,
@@ -476,7 +490,6 @@ function ServiceView({
   const [car, setCar] = useState("پژو ۲۰۷ پانوراما · ۱۴۰۱");
   const [problem, setProblem] = useState("");
   const [coords, setCoords] = useState<{ lat: number; lng: number } | null>(null);
-  const specialist = service.id === "roadside" || service.id === "transport" ? "امدادگر" : "متخصص";
 
   function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -488,20 +501,13 @@ function ServiceView({
       <PageTitle title={service.name} subtitle={`ثبت درخواست ${service.name} با چند قدم ساده`} onBack={onBack} />
 
       <section className="service-hero">
-        <Image src="/slides/service-hero.jpg" alt="" fill sizes="(max-width: 900px) 100vw, 1320px" className="service-hero-image" />
-        <span className="service-hero-veil" aria-hidden="true" />
-        <div className="service-hero-copy">
-          <span className="service-hero-tag"><Icon name="sparkles" size={13} /> خدمت هوشمند خودرو چاره</span>
-          <h2>از ثبت موقعیت تا رسیدن {specialist}، فقط چند دقیقه</h2>
-          <p>بعد از ثبت مبدأ، نزدیک‌ترین و مناسب‌ترین {specialist} را به‌صورت هوشمند پیدا می‌کنیم و به سمتت می‌فرستیم؛ با قیمت منصفانه و بدون واسطه.</p>
-          <div className="service-hero-chips">
-            <span className="hero-chip hero-chip--one"><Icon name="pin" size={13} /> نزدیک‌ترین {specialist}</span>
-            <span className="hero-chip hero-chip--two"><Icon name="clock" size={13} /> حداکثر ۱۰ دقیقه</span>
-            <span className="hero-chip hero-chip--three"><Icon name="tag" size={13} /> قیمت منصفانه</span>
-            <span className="hero-chip hero-chip--four"><Icon name="shield" size={13} /> پرداخت آنلاین امن</span>
-            <span className="hero-chip hero-chip--five"><Icon name="check" size={13} /> اتوماسیون هوشمند، بدون کلاهبرداری</span>
-          </div>
-        </div>
+        <Image
+          src="/slides/service-hero.jpg"
+          alt="فرایند هوشمند امداد خودرو چاره از ثبت موقعیت تا رسیدن امدادگر"
+          fill
+          sizes="(max-width: 900px) 100vw, 1320px"
+          className="service-hero-image"
+        />
       </section>
 
       <section className="panel-card service-request-card">
@@ -530,7 +536,7 @@ function ServiceView({
                   <textarea value={problem} onChange={(event) => setProblem(event.target.value)} placeholder="مثلاً: ماشین روشن نمی‌شود یا پنچر شده‌ام..." rows={4} required />
                 </span>
               </label>
-              <div className="request-footnote"><Icon name="shield" size={15} />پرداخت آنلاین و امن پس از انجام خدمت؛ قیمت مصوب و بدون کلاهبرداری.</div>
+              <TrustWarning />
             </div>
             <div className="request-map">
               <span className="field-label">موقعیت دریافت خدمت</span>
@@ -553,97 +559,68 @@ function WaitingView({
   onCancel: () => void;
   onToast: (message: string) => void;
 }) {
-  const [phase, setPhase] = useState<"searching" | "assigned" | "moving" | "arrived">("searching");
-  const [eta, setEta] = useState(10);
-  const [progress, setProgress] = useState(0);
-  const specialist = request.service.id === "roadside" || request.service.id === "transport" ? "امدادگر" : "متخصص";
+  const [secondsLeft, setSecondsLeft] = useState(15 * 60);
 
   useEffect(() => {
-    const found = window.setTimeout(() => setPhase("assigned"), 3200);
-    const moving = window.setTimeout(() => setPhase("moving"), 4400);
-    return () => {
-      window.clearTimeout(found);
-      window.clearTimeout(moving);
-    };
+    const timer = window.setInterval(() => {
+      setSecondsLeft((value) => (value <= 1 ? 0 : value - 1));
+    }, 1000);
+    return () => window.clearInterval(timer);
   }, []);
 
   useEffect(() => {
-    if (phase !== "moving") return;
-    const timer = window.setInterval(() => {
-      setEta((value) => {
-        if (value <= 1) {
-          window.clearInterval(timer);
-          setPhase("arrived");
-          return 0;
-        }
-        return value - 1;
-      });
-      setProgress((value) => Math.min(1, value + 0.11));
-    }, 1400);
-    return () => window.clearInterval(timer);
-  }, [phase]);
+    if (secondsLeft === 0) onToast("امدادگر به محل شما رسید.");
+  }, [secondsLeft, onToast]);
 
-  const statusText =
-    phase === "searching"
-      ? `در حال جستجوی نزدیک‌ترین ${specialist}...`
-      : phase === "assigned"
-        ? `${specialist} انتخاب شد؛ آمادهٔ حرکت به سمت شماست.`
-        : phase === "moving"
-          ? `${specialist} در مسیر شماست...`
-          : `${specialist} به شما رسید. سرویس آغاز می‌شود.`;
+  const mm = String(Math.floor(secondsLeft / 60)).padStart(2, "0");
+  const ss = String(secondsLeft % 60).padStart(2, "0");
 
   return (
     <div className="waiting-page">
       <div className="page-title-row waiting-title-row">
         <div className="page-title-main">
           <button className="back-button" type="button" onClick={onCancel} aria-label="بازگشت"><Icon name="arrow-right" size={19} /></button>
-          <div><h1>در حال اعزام {specialist}</h1><p>{request.service.name} · {request.car}</p></div>
+          <div><h1>در حال اعزام امدادگر</h1><p>{request.service.name} · {request.car}</p></div>
         </div>
       </div>
 
       <div className="waiting-map">
-        <TrackingMap lat={request.lat} lng={request.lng} progress={progress} />
-        {phase === "searching" && <div className="waiting-radar" aria-hidden="true"><span /><span /><span /></div>}
+        <UserPinMap lat={request.lat} lng={request.lng} />
       </div>
 
       <section className="waiting-sheet">
-        <div className="waiting-status-row">
-          <span className={`waiting-live-dot${phase === "arrived" ? " is-done" : ""}`} />
-          <strong>{statusText}</strong>
-          {phase === "moving" && <span className="waiting-eta">تا {eta} دقیقه</span>}
-          {phase === "assigned" && <span className="waiting-eta">در حال آماده‌سازی</span>}
-          {phase === "arrived" && <span className="waiting-eta waiting-eta--done">انجام شد</span>}
-        </div>
-        <div className="waiting-progress" role="progressbar" aria-valuenow={Math.round(progress * 100)} aria-valuemin={0} aria-valuemax={100}>
-          <span className="waiting-progress-fill" style={{ width: `${Math.max(6, progress * 100)}%` }} />
+        <div className="waiting-timer">
+          <span className="waiting-timer-label">امدادگر در مسیر شماست</span>
+          <strong className="waiting-timer-digits">{faDigits(`${mm}:${ss}`)}</strong>
+          <span className="waiting-timer-sub">زمان باقی‌مانده تا رسیدن امدادگر (حداکثر ۱۵ دقیقه)</span>
         </div>
 
-        <ol className="waiting-steps">
-          <li className="is-done"><Icon name="check" size={13} /> ثبت درخواست</li>
-          <li className={phase === "searching" ? "is-active" : "is-done"}>{phase === "searching" ? "◌" : <Icon name="check" size={13} />} جستجوی {specialist}</li>
-          <li className={phase === "moving" ? "is-active" : phase === "arrived" ? "is-done" : ""}>{phase === "arrived" ? <Icon name="check" size={13} /> : "◌"} حرکت به سمت شما</li>
-          <li className={phase === "arrived" ? "is-active" : ""}>◌ پرداخت امن</li>
-        </ol>
-
-        <article className={`driver-card${phase === "searching" ? " is-pending" : ""}`}>
-          <span className="driver-avatar" aria-hidden="true">{phase === "searching" ? "" : "ر‌م"}</span>
+        <article className="driver-card">
+          <Image src="/slides/driver-avatar.jpg" alt="عکس پروفایل رضا محمدی، امدادگر رسمی خودرو چاره" width={56} height={56} className="driver-photo" />
           <div className="driver-info">
-            <strong>{phase === "searching" ? "در حال یافتن بهترین گزینه..." : "رضا محمدی"}</strong>
-            <small>{phase === "searching" ? "هوشمندترین انتخاب، نزدیک‌ترین مسیر" : `${specialist} تأییدشده · امتیاز ۴.۹`}</small>
-            {phase !== "searching" && <span className="driver-vehicle"><Icon name="car" size={13} /> ون امداد · ایران ۴۶ ط ۲۳۴</span>}
+            <strong>رضا محمدی</strong>
+            <small>امدادگر رسمی خودرو چاره · امتیاز ۴.۹</small>
+            <span className="driver-vehicle"><Icon name="car" size={13} /> ون امداد · ایران ۴۶ ط ۲۳۴</span>
           </div>
           <div className="driver-side">
-            <strong>{phase === "searching" ? "—" : "۲۵۰٬۰۰۰"} <small>تومان</small></strong>
+            <strong>۲۵۰٬۰۰۰ <small>تومان</small></strong>
             <small>هزینهٔ تخمینی</small>
-            {phase !== "searching" && (
+            <div className="driver-actions">
               <button type="button" className="driver-call" onClick={() => onToast("تماس با امدادگر در نسخهٔ کامل فعال می‌شود.")}>
                 <Icon name="phone" size={14} /> تماس
               </button>
-            )}
+              <button type="button" className="driver-chat" onClick={() => onToast("گفتگو با امدادگر در نسخهٔ کامل فعال می‌شود.")}>
+                <Icon name="chat" size={14} /> چت
+              </button>
+            </div>
           </div>
         </article>
 
-        <div className="waiting-note"><Icon name="shield" size={14} /> پرداخت آنلاین و امن پس از انجام خدمت؛ بدون واسطه و کلاهبرداری.</div>
+        <button type="button" className="pay-button" onClick={() => onToast("پرداخت امن پس از انجام خدمت فعال می‌شود.")}>
+          <Icon name="wallet" size={16} /> پرداخت
+        </button>
+
+        <TrustWarning />
         <button type="button" className="waiting-cancel" onClick={onCancel}>انصراف از درخواست</button>
       </section>
     </div>
