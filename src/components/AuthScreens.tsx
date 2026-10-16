@@ -130,10 +130,12 @@ export function LoginScreen() {
   const [passwordVisible, setPasswordVisible] = useState(false);
   const [remember, setRemember] = useState(true);
   const [error, setError] = useState("");
+  const [notice, setNotice] = useState("");
 
   function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     setError("");
+    setNotice("");
     const normalizedUsername = username.trim().toLowerCase();
 
     if (normalizedUsername === ADMIN_USERNAME && password === ADMIN_PASSWORD) {
@@ -158,7 +160,7 @@ export function LoginScreen() {
       return identifierMatches && item.password === password;
     });
     if (!user) {
-      setError("نام کاربری یا شماره تماس و رمز عبور درست نیست. اگر حساب نداری، ثبت‌نام کن.");
+      setError("شماره تماس یا رمز عبور درست نیست. اگر حساب نداری، ثبت‌نام کن.");
       return;
     }
     const session = { name: user.name, username: user.username, phone: user.phone || (user.username.startsWith("09") ? user.username : ""), wallet: "۰" };
@@ -183,14 +185,17 @@ export function LoginScreen() {
             <p>برای ادامه، وارد حساب کاربری‌ات شو.</p>
           </div>
           <form className="auth-form" onSubmit={handleSubmit}>
-            <Field label="نام کاربری یا شماره تماس" name="username" value={username} onChange={setUsername} placeholder="نام کاربری یا شماره تماس" autoComplete="username" minLength={3} maxLength={32} ltr />
+            <Field label="شماره تماس" name="username" value={username} onChange={setUsername} placeholder="۰۹۱۲۳۴۵۶۷۸۹" autoComplete="username" inputMode="tel" minLength={3} maxLength={32} ltr />
             <Field label="رمز عبور" name="password" type="password" value={password} onChange={setPassword} placeholder="رمز عبورت را وارد کن" autoComplete="current-password" minLength={6} showToggle visible={passwordVisible} onToggle={() => setPasswordVisible((current) => !current)} />
             <div className="form-options">
               <label className="check-label"><input type="checkbox" checked={remember} onChange={(event) => setRemember(event.target.checked)} /><span className="custom-check"><Icon name="check" size={12} /></span><span>مرا به خاطر بسپار</span></label>
-              <span className="password-hint">حداقل ۶ کاراکتر</span>
+              <button type="button" className="auth-inline-link" onClick={() => setNotice("بازیابی رمز عبور به‌زودی از طریق پیامک فعال می‌شود.")}>رمز عبورم را فراموش کردم</button>
             </div>
             {error && <p className="form-error" role="alert">{error}</p>}
+            {notice && <p className="form-notice" role="status">{notice}</p>}
             <button className="primary-button auth-submit" type="submit">ورود به حساب <Icon name="arrow-left" size={18} /></button>
+            <div className="auth-divider"><span>یا</span></div>
+            <button className="auth-otp-btn" type="button" onClick={() => setNotice("ورود با کد یک بار مصرف به‌زودی فعال می‌شود.")}><Icon name="chat" size={16} /> ورود با کد یک بار مصرف</button>
           </form>
           <p className="auth-switch">حساب کاربری نداری؟ <Link href="/register">ثبت‌نام کن</Link></p>
           <p className="auth-legal">با ورود، <a href="#terms">قوانین و مقررات خودرو چاره</a> را می‌پذیری.</p>
