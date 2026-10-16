@@ -8,6 +8,8 @@ import { BrandLogo, Icon } from "@/components/Icons";
 
 const USERS_KEY = "khodrochare_users_v1";
 const SESSION_KEY = "khodrochare_session_v1";
+const ADMIN_USERNAME = "admin";
+const ADMIN_PASSWORD = "Chareh1404!";
 
 type LocalUser = {
   name: string;
@@ -25,58 +27,26 @@ function readUsers(): LocalUser[] {
   }
 }
 
-function openDemoSession() {
-  localStorage.setItem(
-    SESSION_KEY,
-    JSON.stringify({ name: "آرمان رضایی", username: "arman", wallet: "۱٬۲۵۰٬۰۰۰" }),
-  );
-}
-
-function AuthVisual({ mode }: { mode: "login" | "register" }) {
+function AuthVisual() {
   return (
-    <aside className="auth-visual" aria-label="خدمات خودرو چاره">
-      <div className="auth-visual-top">
-        <div className="auth-logo-frame">
-          <Image
-            src="/khodrochare-3d-logo.webp"
-            alt="لوگوی خودرو چاره"
-            width={1568}
-            height={447}
-            priority
-            className="auth-logo-image"
-          />
-        </div>
-        <span className="auth-status-pill"><span className="status-dot" /> همیشه همراه ماشینت</span>
+    <aside className="auth-visual" aria-label="پیام خودرو چاره">
+      <div className="auth-logo-frame">
+        <Image
+          src="/khodrochare-3d-logo.webp"
+          alt="لوگوی خودرو چاره"
+          width={1568}
+          height={447}
+          priority
+          className="auth-logo-image"
+        />
       </div>
-      <div className="auth-visual-copy">
-        <span className="auth-kicker"><Icon name="sparkles" size={16} /> سفر آسوده از همین‌جا شروع می‌شود</span>
-        <h2>{mode === "login" ? "ماشینت تنها نیست." : "به خانوادهٔ خودرو چاره خوش آمدی."}</h2>
-        <p>از امداد و سرویس تا خرید و فروش خودرو؛ هر چیزی که ماشینت لازم دارد، یک‌جا و در دسترس توست.</p>
-        <div className="auth-points">
-          <span><Icon name="check" size={15} /> خدمات مطمئن و سریع</span>
-          <span><Icon name="check" size={15} /> همراهی هوشمند، هر لحظه</span>
-        </div>
+      <div className="auth-message-copy">
+        <span className="auth-kicker"><span className="auth-message-dot" />همیشه همراهت، توی راه و بی‌راه</span>
+        <h2>اگر تو راه موندی و عجله داری،<br /><strong>سریع تماس بگیر.</strong></h2>
+        <p>یک تماس، یک چاره؛ خودرو چاره.</p>
       </div>
-      <div className="auth-art-stage">
-        <div className="auth-art-glow" />
-        <svg className="auth-car-art" viewBox="0 0 520 250" fill="none" aria-hidden="true">
-          <ellipse cx="273" cy="212" rx="197" ry="17" fill="#071019" opacity=".65" />
-          <circle cx="348" cy="135" r="104" fill="#FF862E" opacity=".11" />
-          <path d="m66 168 24-45c9-17 23-28 43-31l53-7 48-43c11-10 25-15 40-15h42c14 0 25 6 34 17l42 49 31 10c12 4 21 15 23 28l4 37c2 12-8 22-20 22H81c-13 0-21-10-15-22Z" fill="url(#auth-car-body)" stroke="#C8D2D9" strokeWidth="2" />
-          <path d="m190 82 46-42c9-8 20-12 32-12h43c10 0 18 5 25 12l34 42H190Z" fill="#152632" stroke="#8395A2" strokeWidth="2" />
-          <path d="m260 30-3 52m24-52 5 52m90 4H122" stroke="#718593" strokeOpacity=".8" strokeWidth="2" />
-          <path d="M72 151h48l-7 27H62m411-29 24 7 2 22h-25l-1-29Z" fill="#FFCEAC" />
-          <path d="M72 151h48l-7 27H62m411-29 24 7 2 22h-25l-1-29Z" stroke="#F59454" strokeWidth="2" />
-          <path d="M121 169h279" stroke="#192A36" strokeWidth="2" />
-          <circle cx="148" cy="186" r="32" fill="#101820" stroke="#8295A3" strokeWidth="3" /><circle cx="148" cy="186" r="18" fill="#314454" stroke="#D5DDE2" strokeWidth="2" /><circle cx="148" cy="186" r="5" fill="#FF7929" />
-          <circle cx="403" cy="186" r="32" fill="#101820" stroke="#8295A3" strokeWidth="3" /><circle cx="403" cy="186" r="18" fill="#314454" stroke="#D5DDE2" strokeWidth="2" /><circle cx="403" cy="186" r="5" fill="#FF7929" />
-          <path d="M146 169v34m-17-17h34m240-17v34m-17-17h34" stroke="#CAD3DA" strokeWidth="2" strokeLinecap="round" />
-          <path d="m389 43 5-11 5 11 11 5-11 5-5 11-5-11-11-5 11-5Z" fill="#FF9D57" />
-          <defs><linearGradient id="auth-car-body" x1="83" y1="86" x2="457" y2="206" gradientUnits="userSpaceOnUse"><stop stopColor="#F9FBFC" /><stop offset=".48" stopColor="#B9C5CD" /><stop offset="1" stopColor="#758996" /></linearGradient></defs>
-        </svg>
-        <div className="auth-floating-card"><span className="auth-mini-icon"><Icon name="shield" size={20} /></span><span><strong>با خیال راحت بران</strong><small>پشتیبانی در تمام مسیر</small></span><span className="auth-mini-check"><Icon name="check" size={14} /></span></div>
-      </div>
-      <div className="auth-visual-footer"><span>راهِ بهترِ مراقبت از خودرو</span><span>خودرو چاره <b>©</b> ۱۴۰۴</span></div>
+      <span className="auth-visual-orbit auth-visual-orbit--one" aria-hidden="true" />
+      <span className="auth-visual-orbit auth-visual-orbit--two" aria-hidden="true" />
     </aside>
   );
 }
@@ -155,19 +125,33 @@ export function LoginScreen() {
     event.preventDefault();
     setError("");
     const normalizedUsername = username.trim().toLowerCase();
+
+    if (normalizedUsername === ADMIN_USERNAME && password === ADMIN_PASSWORD) {
+      const adminSession = { name: "مدیر خودرو چاره", username: ADMIN_USERNAME, wallet: "۱۰٬۰۰۰٬۰۰۰", role: "admin" };
+      if (remember) {
+        localStorage.setItem(SESSION_KEY, JSON.stringify(adminSession));
+        sessionStorage.removeItem(SESSION_KEY);
+      } else {
+        sessionStorage.setItem(SESSION_KEY, JSON.stringify(adminSession));
+        localStorage.removeItem(SESSION_KEY);
+      }
+      router.push("/home");
+      return;
+    }
+
     const user = readUsers().find((item) => item.username.toLowerCase() === normalizedUsername && item.password === password);
     if (!user) {
-      setError("نام کاربری یا رمز عبور درست نیست. اگر هنوز حساب نساخته‌ای، ثبت‌نام کن.");
+      setError("نام کاربری یا رمز عبور درست نیست. اگر حساب نداری، ثبت‌نام کن.");
       return;
     }
     const session = { name: user.name, username: user.username, wallet: "۰" };
-    if (remember) localStorage.setItem(SESSION_KEY, JSON.stringify(session));
-    else sessionStorage.setItem(SESSION_KEY, JSON.stringify(session));
-    router.push("/home");
-  }
-
-  function handleDemo() {
-    openDemoSession();
+    if (remember) {
+      localStorage.setItem(SESSION_KEY, JSON.stringify(session));
+      sessionStorage.removeItem(SESSION_KEY);
+    } else {
+      sessionStorage.setItem(SESSION_KEY, JSON.stringify(session));
+      localStorage.removeItem(SESSION_KEY);
+    }
     router.push("/home");
   }
 
@@ -191,12 +175,10 @@ export function LoginScreen() {
             {error && <p className="form-error" role="alert">{error}</p>}
             <button className="primary-button auth-submit" type="submit">ورود به حساب <Icon name="arrow-left" size={18} /></button>
           </form>
-          <div className="auth-divider"><span>یا</span></div>
-          <button className="demo-button" type="button" onClick={handleDemo}><span className="demo-sparkle"><Icon name="sparkles" size={17} /></span> ورود به نسخهٔ نمایشی</button>
           <p className="auth-switch">حساب کاربری نداری؟ <Link href="/register">ثبت‌نام کن</Link></p>
-          <p className="auth-legal">با ورود به خودرو چاره، <a href="#terms">قوانین و مقررات</a> را می‌پذیری.</p>
+          <p className="auth-legal">با ورود، <a href="#terms">قوانین و مقررات خودرو چاره</a> را می‌پذیری.</p>
         </section>
-        <AuthVisual mode="login" />
+        <AuthVisual />
       </div>
     </main>
   );
@@ -219,6 +201,10 @@ export function RegisterScreen() {
       setError("نام کاربری باید ۳ تا ۲۰ کاراکتر و شامل حروف انگلیسی یا عدد باشد.");
       return;
     }
+    if (normalizedUsername === ADMIN_USERNAME) {
+      setError("این نام کاربری رزرو شده است؛ نام دیگری انتخاب کن.");
+      return;
+    }
     if (password.length < 6) {
       setError("رمز عبور باید دست‌کم ۶ کاراکتر باشد.");
       return;
@@ -235,6 +221,7 @@ export function RegisterScreen() {
     const user: LocalUser = { name: name.trim(), username: normalizedUsername, password };
     localStorage.setItem(USERS_KEY, JSON.stringify([...users, user]));
     localStorage.setItem(SESSION_KEY, JSON.stringify({ name: user.name, username: user.username, wallet: "۰" }));
+    sessionStorage.removeItem(SESSION_KEY);
     router.push("/home");
   }
 
@@ -258,9 +245,9 @@ export function RegisterScreen() {
             <button className="primary-button auth-submit" type="submit">ساخت حساب کاربری <Icon name="arrow-left" size={18} /></button>
           </form>
           <p className="auth-switch">قبلاً حساب ساخته‌ای؟ <Link href="/">وارد شو</Link></p>
-          <p className="auth-legal">اطلاعات این نسخهٔ نمایشی فقط در مرورگر شما ذخیره می‌شود.</p>
+          <p className="auth-legal">با ساخت حساب، قوانین و حریم خصوصی خودرو چاره را می‌پذیری.</p>
         </section>
-        <AuthVisual mode="register" />
+        <AuthVisual />
       </div>
     </main>
   );

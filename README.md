@@ -1,36 +1,24 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# خودرو چاره
 
-## Getting Started
+رابط کاربری راست‌چین و واکنش‌گرای اپلیکیشن خدمات خودرویی «خودرو چاره» با Next.js. این نسخه شامل ورود و ثبت‌نام، داشبورد خدمات، کیف پول، تاریخچه، جمعه‌بازار، تالار خودرو و صفحات حساب کاربری است.
 
-First, run the development server:
+## اجرای محلی
 
 ```bash
+npm ci
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+سپس `http://localhost:3000` را باز کنید.
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+## ورود
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+- نام کاربری مدیر: `admin`
+- رمز عبور مدیر: `Chareh1404!`
+- برای ساخت حساب کاربری دیگر، از پیوند ثبت‌نام در صفحهٔ ورود استفاده کنید. نام کاربری باید یکتا باشد.
 
-## Learn More
+**مهم:** این پروژه فعلاً نمونهٔ رابط کاربری است؛ ورود، حساب‌ها و داده‌ها در مرورگر شبیه‌سازی می‌شوند. اطلاعات مدیر در کد سمت کاربر قرار دارد و برای استفادهٔ واقعی، باید احراز هویت و نگهداری اطلاعات به سرویس سمت سرور منتقل شوند.
 
-To learn more about Next.js, take a look at the following resources:
+## PWA
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
-
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
-
-## Deploy on Vercel
-
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+پیکربندی نصب‌پذیری در `src/app/manifest.ts` قرار دارد. سرویس‌ورکر `public/sw.js` پوستهٔ برنامه، فایل‌های ثابت و صفحهٔ آفلاین را کش می‌کند. نصب PWA در مرورگرهای پشتیبانی‌شده از طریق گزینهٔ نصب مرورگر و روی HTTPS یا localhost در دسترس است.
