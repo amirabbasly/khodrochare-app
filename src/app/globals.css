@@ -173,9 +173,9 @@ a {
   padding: 26px;
   overflow: hidden;
   background:
-    radial-gradient(circle at 6% 4%, rgba(244, 119, 37, 0.09), transparent 24%),
-    radial-gradient(circle at 97% 93%, rgba(42, 100, 126, 0.08), transparent 26%),
-    #f4f5f5;
+    radial-gradient(ellipse at 12% 16%, rgba(244, 119, 37, 0.18), transparent 42%),
+    radial-gradient(ellipse at 88% 84%, rgba(64, 150, 180, 0.22), transparent 46%),
+    linear-gradient(150deg, #0b1d28 0%, #143245 55%, #0a1a24 100%);
 }
 
 .auth-layout {
@@ -184,10 +184,11 @@ a {
   display: grid;
   grid-template-columns: minmax(0, 0.98fr) minmax(0, 1.02fr);
   overflow: hidden;
-  border: 1px solid rgba(222, 228, 231, 0.8);
+  border: 1px solid rgba(255, 255, 255, 0.18);
   border-radius: 30px;
-  background: #fff;
-  box-shadow: 0 26px 80px rgba(30, 48, 62, 0.12);
+  background: rgba(255, 255, 255, 0.08);
+  backdrop-filter: blur(28px) saturate(1.25);
+  box-shadow: 0 32px 90px rgba(4, 14, 22, 0.5), inset 0 1px 0 rgba(255, 255, 255, 0.2);
 }
 
 .auth-form-panel {
@@ -195,7 +196,8 @@ a {
   flex-direction: column;
   justify-content: center;
   padding: 58px clamp(40px, 5.3vw, 72px);
-  background: linear-gradient(160deg, #fff 10%, #fff 70%, #fffaf6 100%);
+  background: linear-gradient(160deg, rgba(255, 255, 255, 0.97) 10%, rgba(255, 255, 255, 0.9) 70%, rgba(255, 250, 246, 0.94) 100%);
+  backdrop-filter: blur(12px);
 }
 
 .auth-mobile-brand {
@@ -564,9 +566,11 @@ a {
   overflow: hidden;
   color: #fff;
   background:
-    radial-gradient(ellipse at 74% 90%, rgba(245, 116, 35, 0.16), transparent 38%),
-    radial-gradient(ellipse at 10% 12%, rgba(69, 117, 142, 0.24), transparent 37%),
-    linear-gradient(145deg, #142a38, #0d1d29 69%, #0a1821);
+    radial-gradient(ellipse at 74% 90%, rgba(245, 116, 35, 0.2), transparent 38%),
+    radial-gradient(ellipse at 10% 12%, rgba(69, 117, 142, 0.28), transparent 37%),
+    linear-gradient(145deg, rgba(20, 42, 56, 0.58), rgba(13, 29, 41, 0.7) 69%, rgba(10, 24, 33, 0.76));
+  border-inline-start: 1px solid rgba(255, 255, 255, 0.12);
+  backdrop-filter: blur(22px) saturate(1.2);
 }
 
 .auth-visual::before,
@@ -608,22 +612,11 @@ a {
   gap: 14px;
 }
 
-.auth-logo-frame {
-  width: min(58%, 345px);
-  overflow: hidden;
-  border: 1px solid rgba(255, 255, 255, 0.13);
-  border-radius: 20px;
-  background: rgba(255, 255, 255, 0.07);
-  backdrop-filter: blur(16px) saturate(1.2);
-  box-shadow: 0 16px 40px rgba(0, 0, 0, 0.24), inset 0 1px 0 rgba(255, 255, 255, 0.1);
-}
-
 .auth-logo-image {
   width: 100%;
   height: auto;
   display: block;
   object-fit: contain;
-  mix-blend-mode: screen;
 }
 
 .auth-status-pill {
@@ -4730,7 +4723,6 @@ a {
   .auth-page {
     display: block;
     padding: 10px;
-    background: #f5f6f6;
   }
 
   .auth-layout,
