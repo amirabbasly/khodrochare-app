@@ -20,7 +20,7 @@ type View =
   | "notifications"
   | "service";
 
-type UserSession = { name?: string; username?: string; wallet?: string };
+type UserSession = { name?: string; username?: string; phone?: string; wallet?: string };
 type Service = { id: ServiceId; name: string; note: string; category: string };
 
 const services: Service[] = [
@@ -72,6 +72,14 @@ const bottomItems: { label: string; view: View; icon: "home" | "market" | "aucti
 
 function latinDigits(value: string) {
   return value.replace(/[۰-۹]/g, (digit) => String("۰۱۲۳۴۵۶۷۸۹".indexOf(digit))).replace(/[٬،,\s]/g, "");
+}
+
+function normalizePhoneNumber(value: string) {
+  let digits = value.replace(/[۰-۹]/g, (digit) => String("۰۱۲۳۴۵۶۷۸۹".indexOf(digit))).replace(/\D/g, "");
+  if (digits.startsWith("0098")) digits = `0${digits.slice(4)}`;
+  else if (digits.startsWith("98")) digits = `0${digits.slice(2)}`;
+  else if (digits.length === 10 && digits.startsWith("9")) digits = `0${digits}`;
+  return digits;
 }
 
 function formatMoney(value: number) {
@@ -252,13 +260,13 @@ function HallView({ onBack, onToast }: { onBack: () => void; onToast: (message: 
   </div>;
 }
 
-function ProfileView({ name, username, onSave, onBack, onToast }: { name: string; username: string; onSave: (name: string) => void; onBack: () => void; onToast: (message: string) => void }) {
+function ProfileView({ name, username, phone, onSave, onBack, onToast }: { name: string; username: string; phone: string; onSave: (name: string, phone: string) => void; onBack: () => void; onToast: (message: string) => void }) {
   const [fullName, setFullName] = useState(name);
-  const [phone, setPhone] = useState("۰۹۱۲ ۳۴۵ ۶۷۸۹");
+  const [phoneNumber, setPhoneNumber] = useState(phone);
   const [email, setEmail] = useState("");
   return <div className="subpage"><PageTitle title="حساب کاربری" subtitle="اطلاعات و تنظیمات حساب خودت را مدیریت کن." onBack={onBack} />
-    <div className="profile-layout"><section className="panel-card profile-summary"><div className="profile-cover"><span className="profile-cover-orbit" /></div><Avatar name={name} large /><h2>{name}</h2><p dir="ltr">@{username || "arman"}</p><span className="profile-member"><Icon name="shield" size={14} />عضو خودرو چاره</span><div className="profile-stats"><span><b>۰۳</b><small>درخواست</small></span><span><b>۰۱</b><small>خودرو</small></span><span><b>۰۲</b><small>نشان</small></span></div></section>
-      <section className="panel-card profile-edit"><div className="panel-heading"><span className="profile-edit-icon"><Icon name="user" size={20} /></span><div><h2>اطلاعات شخصی</h2><p>اطلاعاتت را به‌روز نگه دار.</p></div></div><form className="profile-form" onSubmit={(event) => { event.preventDefault(); onSave(fullName.trim()); onToast("اطلاعات کاربری ذخیره شد"); }}><label className="form-field"><span className="field-label">نام و نام خانوادگی</span><span className="field-control"><input value={fullName} onChange={(event) => setFullName(event.target.value)} required /></span></label><label className="form-field"><span className="field-label">نام کاربری</span><span className="field-control field-control--ltr"><input value={username || "arman"} readOnly dir="ltr" /></span></label><label className="form-field"><span className="field-label">شمارهٔ موبایل</span><span className="field-control"><input value={phone} onChange={(event) => setPhone(event.target.value)} dir="ltr" /></span></label><label className="form-field"><span className="field-label">ایمیل (اختیاری)</span><span className="field-control field-control--ltr"><input type="email" placeholder="name@example.com" value={email} onChange={(event) => setEmail(event.target.value)} dir="ltr" /></span></label><button className="primary-button" type="submit">ذخیرهٔ تغییرات <Icon name="arrow-left" size={16} /></button></form></section></div>
+    <div className="profile-layout"><section className="panel-card profile-summary"><div className="profile-cover"><span className="profile-cover-orbit" /></div><Avatar name={name} large /><h2>{name}</h2><p dir="ltr">{username === "admin" ? "@admin" : phone || username}</p><span className="profile-member"><Icon name="shield" size={14} />عضو خودرو چاره</span><div className="profile-stats"><span><b>۰۳</b><small>درخواست</small></span><span><b>۰۱</b><small>خودرو</small></span><span><b>۰۲</b><small>نشان</small></span></div></section>
+      <section className="panel-card profile-edit"><div className="panel-heading"><span className="profile-edit-icon"><Icon name="user" size={20} /></span><div><h2>اطلاعات شخصی</h2><p>اطلاعاتت را به‌روز نگه دار.</p></div></div><form className="profile-form" onSubmit={(event) => { event.preventDefault(); onSave(fullName.trim(), phoneNumber); onToast("اطلاعات کاربری ذخیره شد"); }}><label className="form-field"><span className="field-label">نام و نام خانوادگی</span><span className="field-control"><input value={fullName} onChange={(event) => setFullName(event.target.value)} required /></span></label><label className="form-field"><span className="field-label">شمارهٔ تماس</span><span className="field-control field-control--ltr"><input type="tel" autoComplete="tel" value={phoneNumber} onChange={(event) => setPhoneNumber(event.target.value)} dir="ltr" /></span></label><label className="form-field"><span className="field-label">ایمیل (اختیاری)</span><span className="field-control field-control--ltr"><input type="email" placeholder="name@example.com" value={email} onChange={(event) => setEmail(event.target.value)} dir="ltr" /></span></label><button className="primary-button" type="submit">ذخیرهٔ تغییرات <Icon name="arrow-left" size={16} /></button></form></section></div>
     <section className="panel-card settings-list"><button type="button" onClick={() => onToast("تنظیمات امنیتی در نسخهٔ کامل فعال می‌شود")}><span className="settings-icon"><Icon name="shield" size={18} /></span><span><strong>امنیت و حریم خصوصی</strong><small>رمز عبور و تنظیمات ورود</small></span><Icon name="chevron" size={17} /></button><button type="button" onClick={() => onToast("تنظیمات اعلان‌ها باز شد")}><span className="settings-icon"><Icon name="bell" size={18} /></span><span><strong>تنظیمات اعلان‌ها</strong><small>مدیریت پیام‌ها و یادآورها</small></span><Icon name="chevron" size={17} /></button></section>
   </div>;
 }
@@ -354,6 +362,7 @@ export default function Dashboard() {
   const [toast, setToast] = useState("");
   const [userName, setUserName] = useState("آرمان رضایی");
   const [username, setUsername] = useState("arman");
+  const [userPhone, setUserPhone] = useState("");
   const [balance, setBalance] = useState(1250000);
 
   useEffect(() => {
@@ -364,6 +373,7 @@ export default function Dashboard() {
         const user = JSON.parse(stored) as UserSession;
         if (user.name) setUserName(user.name);
         if (user.username) setUsername(user.username);
+        if (user.phone) setUserPhone(user.phone);
         if (user.wallet !== undefined) {
           const value = Number(latinDigits(user.wallet));
           if (!Number.isNaN(value)) setBalance(value);
@@ -404,12 +414,29 @@ export default function Dashboard() {
     notify("کیف پول شما با موفقیت شارژ شد.");
   }
 
-  function saveProfile(nextName: string) {
+  function saveProfile(nextName: string, nextPhone: string) {
     if (nextName) setUserName(nextName);
+    setUserPhone(nextPhone);
     try {
-      const session = JSON.parse(localStorage.getItem("khodrochare_session_v1") || sessionStorage.getItem("khodrochare_session_v1") || "{}");
+      const persistentSession = localStorage.getItem("khodrochare_session_v1");
+      const sessionStorageValue = sessionStorage.getItem("khodrochare_session_v1");
+      const session = JSON.parse(persistentSession || sessionStorageValue || "{}");
       session.name = nextName;
-      localStorage.setItem("khodrochare_session_v1", JSON.stringify(session));
+      session.phone = nextPhone;
+      const normalizedPhone = normalizePhoneNumber(nextPhone);
+      if (session.username && session.username !== "admin" && /^09\\d{9}$/.test(normalizedPhone)) {
+        const users = JSON.parse(localStorage.getItem("khodrochare_users_v1") || "[]") as { username: string; name: string; phone?: string }[];
+        const updatedUsers = users.map((user) => user.username === session.username
+          ? { ...user, name: nextName, username: normalizedPhone, phone: normalizedPhone }
+          : user);
+        localStorage.setItem("khodrochare_users_v1", JSON.stringify(updatedUsers));
+        session.username = normalizedPhone;
+        session.phone = normalizedPhone;
+        setUsername(normalizedPhone);
+        setUserPhone(normalizedPhone);
+      }
+      const storage = persistentSession ? localStorage : sessionStorage;
+      storage.setItem("khodrochare_session_v1", JSON.stringify(session));
     } catch { /* Local-only prototype. */ }
   }
 
@@ -427,7 +454,7 @@ export default function Dashboard() {
     case "history": content = <HistoryView onBack={() => navigate("home")} />; break;
     case "market": content = <MarketView onBack={() => navigate("home")} onToast={notify} />; break;
     case "hall": content = <HallView onBack={() => navigate("home")} onToast={notify} />; break;
-    case "profile": content = <ProfileView name={userName} username={username} onSave={saveProfile} onBack={() => navigate("home")} onToast={notify} />; break;
+    case "profile": content = <ProfileView name={userName} username={username} phone={userPhone} onSave={saveProfile} onBack={() => navigate("home")} onToast={notify} />; break;
     case "mycars": content = <MyCarsView onBack={() => navigate("home")} onToast={notify} />; break;
     case "addresses": content = <AddressesView onBack={() => navigate("home")} onToast={notify} />; break;
     case "invite": content = <InviteView onBack={() => navigate("home")} onToast={notify} />; break;

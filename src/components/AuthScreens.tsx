@@ -14,8 +14,17 @@ const ADMIN_PASSWORD = "Chareh1404!";
 type LocalUser = {
   name: string;
   username: string;
+  phone?: string;
   password: string;
 };
+
+function normalizePhone(value: string) {
+  let digits = value.replace(/[۰-۹]/g, (digit) => String("۰۱۲۳۴۵۶۷۸۹".indexOf(digit))).replace(/\D/g, "");
+  if (digits.startsWith("0098")) digits = `0${digits.slice(4)}`;
+  else if (digits.startsWith("98")) digits = `0${digits.slice(2)}`;
+  else if (digits.length === 10 && digits.startsWith("9")) digits = `0${digits}`;
+  return digits;
+}
 
 function readUsers(): LocalUser[] {
   try {
@@ -34,8 +43,9 @@ function AuthVisual() {
         <Image
           src="/khodrochare-3d-logo.webp"
           alt="لوگوی خودرو چاره"
-          width={1568}
-          height={447}
+          width={2172}
+          height={724}
+          sizes="(max-width: 640px) 262px, 420px"
           priority
           className="auth-logo-image"
         />
@@ -139,12 +149,19 @@ export function LoginScreen() {
       return;
     }
 
-    const user = readUsers().find((item) => item.username.toLowerCase() === normalizedUsername && item.password === password);
+    const normalizedPhone = normalizePhone(username);
+    const user = readUsers().find((item) => {
+      const storedUsername = item.username.trim().toLowerCase();
+      const storedPhone = normalizePhone(item.phone || item.username);
+      const identifierMatches = storedUsername === normalizedUsername
+        || (/^09\d{9}$/.test(normalizedPhone) && storedPhone === normalizedPhone);
+      return identifierMatches && item.password === password;
+    });
     if (!user) {
-      setError("نام کاربری یا رمز عبور درست نیست. اگر حساب نداری، ثبت‌نام کن.");
+      setError("نام کاربری یا شماره تماس و رمز عبور درست نیست. اگر حساب نداری، ثبت‌نام کن.");
       return;
     }
-    const session = { name: user.name, username: user.username, wallet: "۰" };
+    const session = { name: user.name, username: user.username, phone: user.phone || (user.username.startsWith("09") ? user.username : ""), wallet: "۰" };
     if (remember) {
       localStorage.setItem(SESSION_KEY, JSON.stringify(session));
       sessionStorage.removeItem(SESSION_KEY);
@@ -166,7 +183,7 @@ export function LoginScreen() {
             <p>برای ادامه، وارد حساب کاربری‌ات شو.</p>
           </div>
           <form className="auth-form" onSubmit={handleSubmit}>
-            <Field label="نام کاربری" name="username" value={username} onChange={setUsername} placeholder="نام کاربری‌ات را وارد کن" autoComplete="username" minLength={3} maxLength={20} ltr pattern="[A-Za-z0-9._-]+" />
+            <Field label="نام کاربری یا شماره تماس" name="username" value={username} onChange={setUsername} placeholder="نام کاربری یا شماره تماس" autoComplete="username" minLength={3} maxLength={32} ltr />
             <Field label="رمز عبور" name="password" type="password" value={password} onChange={setPassword} placeholder="رمز عبورت را وارد کن" autoComplete="current-password" minLength={6} showToggle visible={passwordVisible} onToggle={() => setPasswordVisible((current) => !current)} />
             <div className="form-options">
               <label className="check-label"><input type="checkbox" checked={remember} onChange={(event) => setRemember(event.target.checked)} /><span className="custom-check"><Icon name="check" size={12} /></span><span>مرا به خاطر بسپار</span></label>
@@ -187,40 +204,37 @@ export function LoginScreen() {
 export function RegisterScreen() {
   const router = useRouter();
   const [name, setName] = useState("");
-  const [username, setUsername] = useState("");
+  const [phone, setPhone] = useState("");
   const [password, setPassword] = useState("");
-  const [confirmPassword, setConfirmPassword] = useState("");
   const [passwordVisible, setPasswordVisible] = useState(false);
   const [error, setError] = useState("");
 
   function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     setError("");
-    const normalizedUsername = username.trim().toLowerCase();
-    if (!/^[a-z0-9._-]{3,20}$/.test(normalizedUsername)) {
-      setError("نام کاربری باید ۳ تا ۲۰ کاراکتر و شامل حروف انگلیسی یا عدد باشد.");
-      return;
-    }
-    if (normalizedUsername === ADMIN_USERNAME) {
-      setError("این نام کاربری رزرو شده است؛ نام دیگری انتخاب کن.");
+    const normalizedPhone = normalizePhone(phone);
+    if (!/^09\d{9}$/.test(normalizedPhone)) {
+      setError("شماره تماس معتبر وارد کن؛ مانند ۰۹۱۲۳۴۵۶۷۸۹.");
       return;
     }
     if (password.length < 6) {
       setError("رمز عبور باید دست‌کم ۶ کاراکتر باشد.");
       return;
     }
-    if (password !== confirmPassword) {
-      setError("تکرار رمز عبور با رمز واردشده مطابقت ندارد.");
-      return;
-    }
     const users = readUsers();
-    if (users.some((item) => item.username.toLowerCase() === normalizedUsername)) {
-      setError("این نام کاربری قبلاً ثبت شده؛ یک نام کاربری دیگر انتخاب کن.");
+    if (users.some((item) => normalizePhone(item.phone || item.username) === normalizedPhone)) {
+      setError("این شماره تماس قبلاً ثبت شده است.");
       return;
     }
-    const user: LocalUser = { name: name.trim(), username: normalizedUsername, password };
+    const user: LocalUser = {
+      name: name.trim(),
+      username: normalizedPhone,
+      phone: normalizedPhone,
+      password,
+    };
+    const session = { name: user.name, username: user.username, phone: user.phone, wallet: "۰" };
     localStorage.setItem(USERS_KEY, JSON.stringify([...users, user]));
-    localStorage.setItem(SESSION_KEY, JSON.stringify({ name: user.name, username: user.username, wallet: "۰" }));
+    localStorage.setItem(SESSION_KEY, JSON.stringify(session));
     sessionStorage.removeItem(SESSION_KEY);
     router.push("/home");
   }
@@ -237,10 +251,8 @@ export function RegisterScreen() {
           </div>
           <form className="auth-form" onSubmit={handleSubmit}>
             <Field label="نام و نام خانوادگی" name="full-name" value={name} onChange={setName} placeholder="مثلاً آرمان رضایی" autoComplete="name" minLength={2} maxLength={50} />
-            <Field label="نام کاربری یکتا" name="new-username" value={username} onChange={setUsername} placeholder="مثلاً arman.rezaei" autoComplete="username" minLength={3} maxLength={20} ltr pattern="[A-Za-z0-9._-]+" />
-            <div className="username-help"><Icon name="shield" size={14} /> نام کاربری باید یکتا و با حروف انگلیسی باشد.</div>
+            <Field label="شماره تماس" name="phone" type="tel" value={phone} onChange={setPhone} placeholder="۰۹۱۲۳۴۵۶۷۸۹" autoComplete="tel" inputMode="tel" minLength={10} maxLength={16} ltr />
             <Field label="رمز عبور" name="new-password" type="password" value={password} onChange={setPassword} placeholder="حداقل ۶ کاراکتر" autoComplete="new-password" minLength={6} showToggle visible={passwordVisible} onToggle={() => setPasswordVisible((current) => !current)} />
-            <Field label="تکرار رمز عبور" name="confirm-password" type="password" value={confirmPassword} onChange={setConfirmPassword} placeholder="رمز عبورت را دوباره وارد کن" autoComplete="new-password" minLength={6} />
             {error && <p className="form-error" role="alert">{error}</p>}
             <button className="primary-button auth-submit" type="submit">ساخت حساب کاربری <Icon name="arrow-left" size={18} /></button>
           </form>

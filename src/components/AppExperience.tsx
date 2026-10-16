@@ -41,8 +41,9 @@ export function SplashGate({ children }: { children: ReactNode }) {
               <Image
                 src="/khodrochare-3d-logo.webp"
                 alt="لوگوی خودرو چاره"
-                width={1568}
-                height={447}
+                width={2172}
+                height={724}
+                sizes="(max-width: 640px) 370px, 405px"
                 priority
                 className="splash-logo"
               />

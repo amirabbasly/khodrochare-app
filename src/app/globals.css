@@ -6240,3 +6240,86 @@ a {
     font-size: 17px;
   }
 }
+
+/* Use the user-supplied, genuinely transparent wordmark everywhere. */
+.brand-lockup {
+  width: fit-content;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 4px;
+  color: var(--ink);
+  text-align: right;
+}
+
+.brand-logo-image {
+  width: min(195px, 100%);
+  height: auto;
+  display: block;
+  object-fit: contain;
+  filter: drop-shadow(0 2px 2px rgba(13, 29, 40, 0.14));
+}
+
+.brand-lockup--compact {
+  display: block;
+  width: 150px;
+}
+
+.brand-lockup--compact .brand-logo-image {
+  width: 150px;
+}
+
+.brand-caption {
+  margin: 0 2px 0 0;
+  color: #8c989e;
+  font-size: 9px;
+  line-height: 1.4;
+}
+
+.brand-lockup--light .brand-caption {
+  color: rgba(255, 255, 255, 0.62);
+}
+
+.drawer-footer .brand-lockup--compact {
+  width: 102px;
+}
+
+.drawer-footer .brand-lockup--compact .brand-logo-image {
+  width: 102px;
+}
+
+.auth-logo-frame {
+  overflow: visible;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
+}
+
+.auth-logo-image {
+  filter: drop-shadow(0 9px 16px rgba(0, 0, 0, 0.16));
+}
+
+.splash-logo-wrap {
+  overflow: visible;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
+}
+
+.splash-logo {
+  filter: drop-shadow(0 12px 22px rgba(0, 0, 0, 0.28));
+}
+
+@media (max-width: 640px) {
+  .brand-lockup--compact,
+  .brand-lockup--compact .brand-logo-image {
+    width: 108px;
+  }
+
+  .drawer-footer .brand-lockup--compact,
+  .drawer-footer .brand-lockup--compact .brand-logo-image {
+    width: 94px;
+  }
+}

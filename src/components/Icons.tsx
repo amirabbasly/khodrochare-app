@@ -1,3 +1,4 @@
+import Image from "next/image";
 import type { CSSProperties, ReactNode } from "react";
 
 type IconName =
@@ -105,29 +106,18 @@ export function Icon({
   );
 }
 
-export function BrandMark({ className }: { className?: string }) {
-  return (
-    <svg
-      aria-hidden="true"
-      className={className}
-      width="42"
-      height="42"
-      viewBox="0 0 48 48"
-      fill="none"
-    >
-      <circle cx="24" cy="24" r="20" stroke="currentColor" strokeWidth="3.2" />
-      <circle cx="24" cy="24" r="12.3" stroke="currentColor" strokeWidth="2.2" opacity=".58" />
-      <path d="M24 15.5v17M15.5 24h17" stroke="#ff7929" strokeWidth="4.3" strokeLinecap="round" />
-      <path d="M9 35.2c5.1 3.7 11.4 5 17.3 3.7 4.3-.9 8-3.2 10.8-6.5" stroke="#ff7929" strokeWidth="2.3" strokeLinecap="round" />
-    </svg>
-  );
-}
-
 export function BrandLogo({ compact = false, light = false }: { compact?: boolean; light?: boolean }) {
   return (
     <div className={`brand-lockup${compact ? " brand-lockup--compact" : ""}${light ? " brand-lockup--light" : ""}`} dir="rtl">
-      <BrandMark className="brand-mark" />
-      <span className="brand-name"><span>خودرو</span><b>چاره</b></span>
+      <Image
+        src="/khodrochare-3d-logo.webp"
+        alt="لوگوی خودرو چاره"
+        width={2172}
+        height={724}
+        sizes={compact ? "(max-width: 640px) 108px, 150px" : "195px"}
+        priority
+        className="brand-logo-image"
+      />
       {!compact && <span className="brand-caption">همراه هوشمند خودرو</span>}
     </div>
   );
