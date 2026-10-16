@@ -50,11 +50,6 @@ function AuthVisual() {
           className="auth-logo-image"
         />
       </div>
-      <div className="auth-message-copy">
-        <span className="auth-kicker"><span className="auth-message-dot" />همیشه همراهت، توی راه و بی‌راه</span>
-        <h2>اگر تو راه موندی و عجله داری،<br /><strong>سریع تماس بگیر.</strong></h2>
-        <p>یک تماس، یک چاره؛ خودرو چاره.</p>
-      </div>
       <span className="auth-visual-orbit auth-visual-orbit--one" aria-hidden="true" />
       <span className="auth-visual-orbit auth-visual-orbit--two" aria-hidden="true" />
     </aside>
@@ -189,13 +184,11 @@ export function LoginScreen() {
             <Field label="رمز عبور" name="password" type="password" value={password} onChange={setPassword} placeholder="رمز عبورت را وارد کن" autoComplete="current-password" minLength={6} showToggle visible={passwordVisible} onToggle={() => setPasswordVisible((current) => !current)} />
             <div className="form-options">
               <label className="check-label"><input type="checkbox" checked={remember} onChange={(event) => setRemember(event.target.checked)} /><span className="custom-check"><Icon name="check" size={12} /></span><span>مرا به خاطر بسپار</span></label>
-              <button type="button" className="auth-inline-link" onClick={() => setNotice("بازیابی رمز عبور به‌زودی از طریق پیامک فعال می‌شود.")}>رمز عبورم را فراموش کردم</button>
+              <button type="button" className="auth-inline-link" onClick={() => setNotice("ورود با کد یک بار مصرف به‌زودی فعال می‌شود.")}>ورود با کد یک بار مصرف</button>
             </div>
             {error && <p className="form-error" role="alert">{error}</p>}
             {notice && <p className="form-notice" role="status">{notice}</p>}
             <button className="primary-button auth-submit" type="submit">ورود به حساب <Icon name="arrow-left" size={18} /></button>
-            <div className="auth-divider"><span>یا</span></div>
-            <button className="auth-otp-btn" type="button" onClick={() => setNotice("ورود با کد یک بار مصرف به‌زودی فعال می‌شود.")}><Icon name="chat" size={16} /> ورود با کد یک بار مصرف</button>
           </form>
           <p className="auth-switch">حساب کاربری نداری؟ <Link href="/register">ثبت‌نام کن</Link></p>
           <p className="auth-legal">با ورود، <a href="#terms">قوانین و مقررات خودرو چاره</a> را می‌پذیری.</p>

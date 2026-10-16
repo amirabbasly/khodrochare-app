@@ -505,9 +505,9 @@ function ServiceView({
       <section className="service-hero">
         <Image
           src="/slides/service-hero.jpg"
-          alt="فرایند هوشمند امداد خودرو چاره از ثبت موقعیت تا رسیدن امدادگر"
+          alt="بنر تمام‌عرض فرایند هوشمند امداد خودرو چاره"
           fill
-          sizes="(max-width: 900px) 100vw, 1320px"
+          sizes="100vw"
           className="service-hero-image"
         />
       </section>
@@ -613,8 +613,22 @@ function WaitingView({
         </div>
       </div>
 
-      <div className="waiting-map">
-        <UserPinMap lat={request.lat} lng={request.lng} />
+      <div className="map-frame">
+        <div className="map-frame-head">
+          <span className="map-frame-badge"><Icon name="pin" size={15} /></span>
+          <div className="map-frame-titles">
+            <strong>موقعیت شما روی نقشه</strong>
+            <small>امدادگر به سمت این موقعیت در حرکت است</small>
+          </div>
+          <span className="map-frame-tag"><Icon name="clock" size={12} /> حداکثر ۱۵ دقیقه</span>
+        </div>
+        <div className="waiting-map">
+          <UserPinMap lat={request.lat} lng={request.lng} />
+        </div>
+        <div className="map-frame-foot">
+          <span><Icon name="shield" size={12} /> امدادگر رسمی خودرو چاره</span>
+          <span><Icon name="car" size={12} /> ون امداد در مسیر شما</span>
+        </div>
       </div>
 
       <section className="waiting-sheet">
