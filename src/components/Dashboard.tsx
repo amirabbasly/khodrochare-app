@@ -272,10 +272,8 @@ function HomeView({
         <button className="bento-main" type="button" onClick={() => onNavigate("history")}>
           <span className="bento-main-scene"><ServicesScene3D /></span>
           <span className="bento-main-veil" aria-hidden="true" />
-          <span className="bento-chip bento-chip--one" aria-hidden="true"><Icon name="clock" size={12} /> در حال انجام</span>
-          <span className="bento-chip bento-chip--two" aria-hidden="true"><Icon name="pin" size={12} /> ۲.۴ کیلومتری شما</span>
           <div className="bento-main-copy">
-            <span className="bento-main-label"><i className="live-dot" /> آخرین خدمت · امداد خودرو</span>
+            <span className="bento-main-label"><i className="live-dot" /> وضعیت آخرین خدمت - امداد خودرو</span>
             <strong>امدادگر در مسیر ...</strong>
             <span className="bento-progress" role="progressbar" aria-valuenow={50} aria-valuemin={0} aria-valuemax={100} aria-label="پیشرفت آخرین خدمت">
               <span className="bento-progress-fill" />

@@ -1107,9 +1107,9 @@ a {
   border-radius: 24px;
   color: #fff;
   background:
-    radial-gradient(ellipse at 18% 88%, rgba(249, 112, 35, 0.2), transparent 46%),
-    radial-gradient(ellipse at 80% 10%, rgba(101, 150, 174, 0.22), transparent 44%),
-    linear-gradient(116deg, #122936 4%, #1b3948 58%, #132c3a 100%);
+    radial-gradient(ellipse at 15% 88%, rgba(249, 112, 35, 0.34), transparent 48%),
+    radial-gradient(ellipse at 82% 8%, rgba(96, 156, 205, 0.3), transparent 46%),
+    linear-gradient(116deg, #0E2431 4%, #204154 55%, #14303F 100%);
   box-shadow: 0 16px 34px rgba(24, 48, 63, 0.12);
   text-align: right;
   transition: transform 200ms ease, box-shadow 200ms ease;
@@ -1147,8 +1147,24 @@ a {
   position: absolute;
   inset: 0;
   z-index: 1;
-  background: linear-gradient(275deg, rgba(10, 26, 38, 0.58) 20%, rgba(10, 26, 38, 0.12) 52%, rgba(10, 26, 38, 0) 74%);
+  background: linear-gradient(275deg, rgba(10, 26, 38, 0.52) 22%, rgba(10, 26, 38, 0.08) 54%, rgba(10, 26, 38, 0) 76%);
   pointer-events: none;
+}
+
+.scene-label,
+.scene-caption {
+  font-family: "Vazir", Tahoma, sans-serif;
+  direction: rtl;
+}
+
+.scene-label {
+  font-size: 12.5px;
+  font-weight: 600;
+}
+
+.scene-caption {
+  font-size: 12px;
+  letter-spacing: -0.2px;
 }
 
 /* 3D animated services scene */
@@ -1318,43 +1334,10 @@ a {
   font-size: 9px;
 }
 
-.bento-chip {
-  position: absolute;
-  z-index: 2;
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  padding: 7px 11px;
-  border: 1px solid rgba(255, 255, 255, 0.16);
-  border-radius: 999px;
-  color: rgba(255, 255, 255, 0.88);
-  background: rgba(14, 34, 48, 0.55);
-  backdrop-filter: blur(9px);
-  font-size: 9px;
-  pointer-events: none;
-}
 
-.bento-chip svg {
-  color: #ffb27b;
-  transform: none;
-}
 
-.bento-chip--one {
-  top: 18px;
-  left: 20px;
-  animation: chip-float 4s ease-in-out infinite;
-}
 
-.bento-chip--two {
-  bottom: 20px;
-  left: 34px;
-  animation: chip-float 4.6s ease-in-out 0.6s infinite;
-}
 
-@keyframes chip-float {
-  0%, 100% { transform: translateY(0); }
-  50% { transform: translateY(-7px); }
-}
 
 .bento-stack {
   display: grid;
@@ -6658,9 +6641,6 @@ a {
     padding: 20px 20px;
   }
 
-  .bento-chip--two {
-    display: none;
-  }
 
   .main-service-card {
     padding: 15px 8px 12px;
@@ -6714,12 +6694,6 @@ a {
     display: none;
   }
 
-  .bento-chip--one {
-    top: 12px;
-    left: 12px;
-    padding: 5px 8px;
-    font-size: 8px;
-  }
 
   .bento-mini {
     border-radius: 16px;
