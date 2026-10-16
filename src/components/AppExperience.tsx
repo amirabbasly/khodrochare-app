@@ -50,6 +50,11 @@ export function SplashGate({ children }: { children: ReactNode }) {
             </div>
             <p className="splash-type-line" aria-live="polite"><span>{typedMessage}</span><i className="splash-cursor" /></p>
             <p className="splash-subtitle">اگر تو راه موندی و عجله داری، سریع تماس بگیر.</p>
+            <a className="splash-phone" href="tel:02191855" dir="ltr" aria-label="تماس با خودرو چاره: ۰۲۱ ۹۱۸۵۵">
+              <span className="splash-phone-prefix">۰۲۱</span>
+              <span className="splash-phone-dash">-</span>
+              <strong className="splash-phone-number">۹۱۸۵۵</strong>
+            </a>
             <div className="splash-loader" aria-hidden="true"><span /></div>
           </div>
           <span className="splash-footer">همراه مطمئن تو در هر مسیر</span>

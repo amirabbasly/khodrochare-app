@@ -540,8 +540,21 @@ function ServiceView({
               </label>
             </div>
             <div className="request-map">
-              <span className="field-label">موقعیت دریافت خدمت</span>
-              <LocationPickerMap onPick={(lat, lng) => setCoords({ lat, lng })} onToast={onToast} />
+              <div className="map-frame">
+                <div className="map-frame-head">
+                  <span className="map-frame-badge"><Icon name="pin" size={15} /></span>
+                  <div className="map-frame-titles">
+                    <strong>موقعیت دریافت خدمت</strong>
+                    <small>روی نقشه بزنید یا موقعیت خود را پیدا کنید</small>
+                  </div>
+                  <span className="map-frame-tag"><Icon name="clock" size={12} /> امداد سریع</span>
+                </div>
+                <LocationPickerMap onPick={(lat, lng) => setCoords({ lat, lng })} onToast={onToast} />
+                <div className="map-frame-foot">
+                  <span><Icon name="shield" size={12} /> موقعیت شما فقط برای اعزام امدادگر استفاده می‌شود</span>
+                  <span><Icon name="clock" size={12} /> حداکثر ۱۵ دقیقه تا رسیدن</span>
+                </div>
+              </div>
             </div>
           </div>
           <button className="primary-button request-submit" type="submit">ثبت درخواست خدمت <Icon name="arrow-left" size={17} /></button>
