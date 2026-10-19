@@ -4,37 +4,8 @@ import Image from "next/image";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState, type FormEvent } from "react";
+import { login, register, saveSession, normalizePhone, latinDigits, validNationalId, errorMessage } from "@/lib/api";
 import { BrandLogo, Icon } from "@/components/Icons";
-
-const USERS_KEY = "khodrochare_users_v1";
-const SESSION_KEY = "khodrochare_session_v1";
-const ADMIN_USERNAME = "admin";
-const ADMIN_PASSWORD = "Chareh1404!";
-
-type LocalUser = {
-  name: string;
-  username: string;
-  phone?: string;
-  password: string;
-};
-
-function normalizePhone(value: string) {
-  let digits = value.replace(/[۰-۹]/g, (digit) => String("۰۱۲۳۴۵۶۷۸۹".indexOf(digit))).replace(/\D/g, "");
-  if (digits.startsWith("0098")) digits = `0${digits.slice(4)}`;
-  else if (digits.startsWith("98")) digits = `0${digits.slice(2)}`;
-  else if (digits.length === 10 && digits.startsWith("9")) digits = `0${digits}`;
-  return digits;
-}
-
-function readUsers(): LocalUser[] {
-  try {
-    const value = localStorage.getItem(USERS_KEY);
-    const parsed: unknown = value ? JSON.parse(value) : [];
-    return Array.isArray(parsed) ? (parsed as LocalUser[]) : [];
-  } catch {
-    return [];
-  }
-}
 
 function AuthVisual() {
   return (
@@ -127,46 +98,17 @@ export function LoginScreen() {
   const [error, setError] = useState("");
   const [notice, setNotice] = useState("");
 
-  function handleSubmit(event: FormEvent<HTMLFormElement>) {
+  const [busy, setBusy] = useState(false);
+  async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    setError("");
-    setNotice("");
-    const normalizedUsername = username.trim().toLowerCase();
-
-    if (normalizedUsername === ADMIN_USERNAME && password === ADMIN_PASSWORD) {
-      const adminSession = { name: "مدیر خودرو چاره", username: ADMIN_USERNAME, wallet: "۱۰٬۰۰۰٬۰۰۰", role: "admin" };
-      if (remember) {
-        localStorage.setItem(SESSION_KEY, JSON.stringify(adminSession));
-        sessionStorage.removeItem(SESSION_KEY);
-      } else {
-        sessionStorage.setItem(SESSION_KEY, JSON.stringify(adminSession));
-        localStorage.removeItem(SESSION_KEY);
-      }
-      router.push("/home");
-      return;
-    }
-
-    const normalizedPhone = normalizePhone(username);
-    const user = readUsers().find((item) => {
-      const storedUsername = item.username.trim().toLowerCase();
-      const storedPhone = normalizePhone(item.phone || item.username);
-      const identifierMatches = storedUsername === normalizedUsername
-        || (/^09\d{9}$/.test(normalizedPhone) && storedPhone === normalizedPhone);
-      return identifierMatches && item.password === password;
-    });
-    if (!user) {
-      setError("شماره تماس یا رمز عبور درست نیست. اگر حساب نداری، ثبت‌نام کن.");
-      return;
-    }
-    const session = { name: user.name, username: user.username, phone: user.phone || (user.username.startsWith("09") ? user.username : ""), wallet: "۰" };
-    if (remember) {
-      localStorage.setItem(SESSION_KEY, JSON.stringify(session));
-      sessionStorage.removeItem(SESSION_KEY);
-    } else {
-      sessionStorage.setItem(SESSION_KEY, JSON.stringify(session));
-      localStorage.removeItem(SESSION_KEY);
-    }
-    router.push("/home");
+    if (busy) return;
+    setError(""); setNotice(""); setBusy(true);
+    try {
+      const session = await login(username, password);
+      saveSession(session, remember);
+      router.replace("/home");
+    } catch (error) { setError(errorMessage(error)); }
+    finally { setBusy(false); }
   }
 
   return (
@@ -188,7 +130,7 @@ export function LoginScreen() {
             </div>
             {error && <p className="form-error" role="alert">{error}</p>}
             {notice && <p className="form-notice" role="status">{notice}</p>}
-            <button className="primary-button auth-submit" type="submit">ورود به حساب <Icon name="arrow-left" size={18} /></button>
+            <button className="primary-button auth-submit" type="submit" disabled={busy} aria-busy={busy}>ورود به حساب <Icon name="arrow-left" size={18} /></button>
           </form>
           <p className="auth-switch">حساب کاربری نداری؟ <Link href="/register">ثبت‌نام کن</Link></p>
           <p className="auth-legal">با ورود، <a href="#terms">قوانین و مقررات خودرو چاره</a> را می‌پذیری.</p>
@@ -205,36 +147,22 @@ export function RegisterScreen() {
   const [phone, setPhone] = useState("");
   const [password, setPassword] = useState("");
   const [passwordVisible, setPasswordVisible] = useState(false);
+  const [nationalCode, setNationalCode] = useState("");
   const [error, setError] = useState("");
 
-  function handleSubmit(event: FormEvent<HTMLFormElement>) {
+  const [busy, setBusy] = useState(false);
+  async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
+    if (busy) return;
     setError("");
-    const normalizedPhone = normalizePhone(phone);
-    if (!/^09\d{9}$/.test(normalizedPhone)) {
-      setError("شماره تماس معتبر وارد کن؛ مانند ۰۹۱۲۳۴۵۶۷۸۹.");
-      return;
-    }
-    if (password.length < 6) {
-      setError("رمز عبور باید دست‌کم ۶ کاراکتر باشد.");
-      return;
-    }
-    const users = readUsers();
-    if (users.some((item) => normalizePhone(item.phone || item.username) === normalizedPhone)) {
-      setError("این شماره تماس قبلاً ثبت شده است.");
-      return;
-    }
-    const user: LocalUser = {
-      name: name.trim(),
-      username: normalizedPhone,
-      phone: normalizedPhone,
-      password,
-    };
-    const session = { name: user.name, username: user.username, phone: user.phone, wallet: "۰" };
-    localStorage.setItem(USERS_KEY, JSON.stringify([...users, user]));
-    localStorage.setItem(SESSION_KEY, JSON.stringify(session));
-    sessionStorage.removeItem(SESSION_KEY);
-    router.push("/home");
+    if (!validNationalId(nationalCode)) { setError("کد ملی معتبر ۱۰ رقمی وارد کنید."); return; }
+    setBusy(true);
+    try {
+      const session = await register({ fullName: name.trim(), phone: normalizePhone(phone), password, nationalId: latinDigits(nationalCode) });
+      saveSession(session, true);
+      router.replace("/home");
+    } catch (error) { setError(errorMessage(error)); }
+    finally { setBusy(false); }
   }
 
   return (
@@ -248,11 +176,12 @@ export function RegisterScreen() {
             <p>با یک حساب ساده، همهٔ خدمات خودرو چاره در دسترس توست.</p>
           </div>
           <form className="auth-form" onSubmit={handleSubmit}>
-            <Field label="نام و نام خانوادگی" name="full-name" value={name} onChange={setName} placeholder="مثلاً آرمان رضایی" autoComplete="name" minLength={2} maxLength={50} />
+            <Field label="نام و نام خانوادگی" name="full-name" value={name} onChange={setName} placeholder="مثلاً آرمان رضایی" autoComplete="name" minLength={3} maxLength={50} />
             <Field label="شماره تماس" name="phone" type="tel" value={phone} onChange={setPhone} placeholder="۰۹۱۲۳۴۵۶۷۸۹" autoComplete="tel" inputMode="tel" minLength={10} maxLength={16} ltr />
-            <Field label="رمز عبور" name="new-password" type="password" value={password} onChange={setPassword} placeholder="حداقل ۶ کاراکتر" autoComplete="new-password" minLength={6} showToggle visible={passwordVisible} onToggle={() => setPasswordVisible((current) => !current)} />
+            <Field label="کد ملی" name="national-code" value={nationalCode} onChange={setNationalCode} placeholder="۱۰ رقم کد ملی" inputMode="numeric" minLength={10} maxLength={10} ltr />
+            <Field label="رمز عبور" name="new-password" type="password" value={password} onChange={setPassword} placeholder="حداقل ۸ کاراکتر" autoComplete="new-password" minLength={8} showToggle visible={passwordVisible} onToggle={() => setPasswordVisible((current) => !current)} />
             {error && <p className="form-error" role="alert">{error}</p>}
-            <button className="primary-button auth-submit" type="submit">ساخت حساب کاربری <Icon name="arrow-left" size={18} /></button>
+            <button className="primary-button auth-submit" type="submit" disabled={busy} aria-busy={busy}>ساخت حساب کاربری <Icon name="arrow-left" size={18} /></button>
           </form>
           <p className="auth-switch">قبلاً حساب ساخته‌ای؟ <Link href="/">وارد شو</Link></p>
           <p className="auth-legal">با ساخت حساب، قوانین و حریم خصوصی خودرو چاره را می‌پذیری.</p>
