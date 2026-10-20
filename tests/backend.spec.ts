@@ -2,14 +2,15 @@ import { test, expect, type Page } from "@playwright/test";
 
 const endpoint = "https://api.khodrochare.ir/api/v1";
 const makeUser = (role: "CUSTOMER" | "DRIVER") => ({ id: `${role}-user`, role, fullName: role === "CUSTOMER" ? "کاربر آزمایشی" : "امدادگر آزمایشی", phone: "09121234567", nationalId: "1234567891", services: ["REPAIR", "TOWING"], vehicleType: "نیسان", vehiclePlate: "12 ب 345 - 67", identityDocumentId: role === "DRIVER" ? "document-id" : null, vehicles: [] });
+type TestPayment = { id: string; status: string; cardNumber: string; accountName: string; serviceToman: number; partsToman: number; amountToman: number; commissionPercent: number; commissionToman: number; driverShareToman: number; attempts: { bankReference: string; status: string }[] };
 type TestUser = ReturnType<typeof makeUser>;
-type TestRequest = { id: string; status: string; service: string; customerId: string; driverId: string | null; vehicleName: string; vehiclePlate: string; originLat: number; originLng: number; destinationLat: number | null; destinationLng: number | null; distanceMeters: number | null; priceToman: number | null; problem: string | null; createdAt: string; updatedAt: string };
+type TestRequest = { id: string; status: string; service: string; customerId: string; driverId: string | null; vehicleName: string; vehiclePlate: string; originLat: number; originLng: number; destinationLat: number | null; destinationLng: number | null; distanceMeters: number | null; priceToman: number | null; originAddress?: string; destinationAddress?: string; partsQuoteToman?: number | null; partsApprovedToman?: number | null; partsQuoteVersion?: number; problem: string | null; createdAt: string; updatedAt: string };
 function makeRequest(): TestRequest {
   return { id: "request-1", status: "PENDING", service: "REPAIR", customerId: "CUSTOMER-user", driverId: null, vehicleName: "پژو ۲۰۶", vehiclePlate: "12 ب 345 - 67", originLat: 35.7, originLng: 51.4, destinationLat: null, destinationLng: null, distanceMeters: null, priceToman: 800000, problem: "خودرو روشن نمی‌شود", createdAt: new Date().toISOString(), updatedAt: new Date().toISOString() };
 }
 async function mockBackend(page: Page, user: TestUser, seed: TestRequest[] = []) {
   const calls: { route: string; method: string; body: Record<string, unknown> | null }[] = [];
-  const state = { requests: seed, gps: false, cookieAuthenticated: false };
+  const state = { requests: seed, gps: false, cookieAuthenticated: false, payment: null as TestPayment | null };
   await page.route("**/socket.io/**", route => route.abort());
   await page.route("https://tile.openstreetmap.org/**", route => route.abort());
   await page.route(`${endpoint}/**`, async route => {
@@ -23,12 +24,31 @@ async function mockBackend(page: Page, user: TestUser, seed: TestRequest[] = [])
     if (suffix.includes("/login") || suffix.includes("/register")) return send({ token: "a".repeat(64), expiresAt: new Date(Date.now() + 86400000).toISOString(), user }, suffix.endsWith("register") ? 201 : 200);
     if (suffix !== "/documents" && req.headers().authorization !== `Bearer ${"a".repeat(64)}` && !state.cookieAuthenticated) return send({ error: "Authentication required" }, 401);
     if (suffix === "/me") return send(user);
+    if (suffix === "/drivers/earnings") return send({ entries: [], totalToman: 0 });
+    if (suffix === "/vehicle-models") return send([{ id: "vm_test206", name: "پژو ۲۰۶", groupId: "GROUP_1", group: { id: "GROUP_1", title: "گروه اول", nissanBaseToman: 1600000, nissanPerKmToman: 60000, flatbedBaseToman: 2000000, flatbedPerKmToman: 75000 } }]);
+    if (suffix === "/locations/search") {
+      const destination = new URL(req.url()).searchParams.get("q")?.includes("آزادی");
+      return send([{ id: (destination ? "b" : "a").repeat(64), label: destination ? "تهران، خیابان آزادی" : "تهران، خیابان ولیعصر", city: "تهران", street: destination ? "خیابان آزادی" : "خیابان ولیعصر", latitude: destination ? 35.8 : 35.7, longitude: destination ? 51.3 : 51.4 }]);
+    }
+    if (suffix === "/requests/towing/estimate") return send({ priceToman: 2200000, distanceMeters: 10000, pricingBreakdown: { service: "TOWING", baseToman: 1600000, perKmToman: 60000, totalToman: 2200000, requiresAgreement: false } });
+    if (suffix.endsWith("/parts-quote/approve")) { state.requests[0].partsApprovedToman = state.requests[0].partsQuoteToman; return send(state.requests[0]); }
+    if (suffix.endsWith("/parts-quote")) { state.requests[0].partsQuoteToman = Number(body!.amountToman); state.requests[0].partsQuoteVersion = 1; state.requests[0].partsApprovedToman = null; return send(state.requests[0]); }
+    if (suffix.endsWith("/payment/report")) { state.payment!.status = "SUBMITTED"; state.payment!.attempts = [{ bankReference: String(body!.bankReference), status: "SUBMITTED" }]; return send(state.payment); }
+    if (suffix.endsWith("/payment")) {
+      if (method === "GET") return send(state.payment);
+      const request = state.requests[0];
+      if (request.service === "REPAIR" && request.partsApprovedToman == null) return send({ error: "Parts quote must be approved before payment" }, 409);
+      const serviceToman = request.priceToman || 0; const partsToman = request.partsApprovedToman || 0;
+      const amountToman = serviceToman + partsToman; const commissionPercent = request.service === "REPAIR" ? 30 : 20;
+      state.payment = { id: "payment-1", status: "AWAITING_TRANSFER", cardNumber: "6219861435789192", accountName: "حساب خودرو چاره", serviceToman, partsToman, amountToman, commissionPercent, commissionToman: amountToman * commissionPercent / 100, driverShareToman: amountToman * (100 - commissionPercent) / 100, attempts: [] };
+      return send(state.payment, 201);
+    }
     if (suffix === "/documents") return send({ id: "c9a7152f-41d8-4fc5-a69c-6ae71152d474", token: "b".repeat(64), expiresInSeconds: 86400 }, 201);
     if (suffix === "/drivers/location") { state.gps = true; return send({ recordedAt: new Date().toISOString() }); }
     if (suffix === "/drivers/requests/available") return send(state.requests.filter(r => r.status === "PENDING").map(r => ({ id: r.id, service: r.service, vehicleName: r.vehicleName, originLat: r.originLat, originLng: r.originLng, destinationLat: r.destinationLat, destinationLng: r.destinationLng, distanceMeters: r.distanceMeters, priceToman: r.priceToman, createdAt: r.createdAt })));
     if (suffix === "/requests") return send(user.role === "DRIVER" ? state.requests.filter(r => r.driverId === user.id) : state.requests);
     if (suffix === "/requests/repair" || suffix === "/requests/towing") {
-      const request = { ...makeRequest(), service: suffix.endsWith("towing") ? "TOWING" : "REPAIR", vehicleName: String(body!.vehicleName), vehiclePlate: String(body!.vehiclePlate) };
+      const request = { ...makeRequest(), service: suffix.endsWith("towing") ? "TOWING" : "REPAIR", vehicleName: String(body!.vehicleName), vehiclePlate: String(body!.vehiclePlate), originAddress: "تهران، خیابان ولیعصر", destinationAddress: suffix.endsWith("towing") ? "تهران، خیابان آزادی" : undefined };
       state.requests.push(request); return send(request, 201);
     }
     if (suffix.endsWith("/accept")) {
@@ -141,21 +161,26 @@ test("home without a backend session redirects to login", async ({ page }) => {
   await expect(page).toHaveURL("http://localhost:3310/");
 });
 
-test("towing submits destination to its separate route", async ({ page }) => {
+test("towing searches city/street text and a database vehicle, then displays the server estimate", async ({ page }) => {
   const user = makeUser("CUSTOMER");
   const { calls } = await mockBackend(page, user);
   await seedSession(page, user);
   await open(page, "http://localhost:3310/home");
   await page.locator(".main-service-card--transport").click();
   await page.getByRole("button", { name: "فهمیدم", exact: true }).click();
-  await page.getByPlaceholder("نام خودرو", { exact: true }).fill("تارا");
+  await page.getByPlaceholder("نام خودرو", { exact: true }).fill("۲۰۶");
+  await page.getByRole("option", { name: "پژو ۲۰۶ · گروه اول" }).getByRole("button").click();
   await page.getByPlaceholder("۱۲ ب ۳۴۵ - ۶۷", { exact: true }).fill("12 ب 345 - 67");
-  await expect(page.locator(".leaflet-container")).toHaveCount(2);
-  await page.locator(".map-canvas").nth(1).click({ position: { x: 190, y: 100 } });
+  await page.getByRole("combobox", { name: "مبدأ حمل (شهر و خیابان)" }).fill("تهران ولیعصر");
+  await page.getByRole("option", { name: "تهران، خیابان ولیعصر" }).getByRole("button").click();
+  await page.getByRole("combobox", { name: "مقصد حمل (شهر و خیابان)" }).fill("تهران آزادی");
+  await page.getByRole("option", { name: "تهران، خیابان آزادی" }).getByRole("button").click();
+  await expect(page.getByRole("status").filter({ hasText: "۲٬۲۰۰٬۰۰۰" })).toBeVisible();
+  await expect(page.locator(".map-coords-chip")).toHaveCount(0);
   await page.getByRole("button", { name: "ثبت درخواست خدمت" }).click();
   await expect(page.locator(".waiting-page")).toBeVisible();
   const payload = calls.find(c => c.route === "/requests/towing")?.body;
-  expect(payload).toMatchObject({ vehicleName: "تارا", vehiclePlate: "12 ب 345 - 67", destination: { latitude: expect.any(Number), longitude: expect.any(Number) } });
+  expect(payload).toMatchObject({ vehicleModelId: "vm_test206", vehicleName: "پژو ۲۰۶", originPlaceId: "a".repeat(64), destinationPlaceId: "b".repeat(64) });
   expect(payload).not.toHaveProperty("priceToman");
   expect(payload).not.toHaveProperty("problem");
 });
@@ -237,4 +262,63 @@ test("driver service choices and complete Iran flag fit on mobile", async ({ pag
   await expect(page.locator(".service-picker-item")).toHaveCount(5);
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);
   await page.locator(".service-picker").screenshot({ path: info.outputPath("driver-services-mobile.png") });
+});
+
+test("repair payment includes approved parts and reports a transfer without marking it paid", async ({ page }, info) => {
+  await page.setViewportSize({ width: 390, height: 844 });
+  const user = makeUser('CUSTOMER');
+  const request = { ...makeRequest(), status: 'ARRIVED', driverId: 'DRIVER-user', partsQuoteToman: 200000, partsQuoteVersion: 1, partsApprovedToman: null };
+  const { state, calls } = await mockBackend(page, user, [request]);
+  await seedSession(page, user);
+  await open(page, 'http://localhost:3310/home');
+  await page.getByRole('button', { name: 'تأیید هزینه قطعات', exact: true }).click();
+  await expect.poll(() => state.requests[0].partsApprovedToman).toBe(200000);
+  await page.locator('.pay-button').click();
+  const dialog = page.getByRole('dialog', { name: 'پرداخت کارت‌به‌کارت' });
+  await expect(dialog).toBeVisible();
+  await expect(dialog.locator('.bank-card-number')).toHaveText('6219 8614 3578 9192');
+  await expect(dialog.getByText('حساب خودرو چاره', { exact: true })).toBeVisible();
+  await expect(dialog.locator('.payment-breakdown')).toContainText('۱٬۰۰۰٬۰۰۰ تومان');
+  await expect(dialog.locator('.payment-breakdown')).toContainText('۳۰۰٬۰۰۰ تومان');
+  await expect(dialog.locator('.payment-breakdown')).toContainText('۷۰۰٬۰۰۰ تومان');
+  expect(await dialog.evaluate(element => element.scrollWidth <= element.clientWidth)).toBe(true);
+  await dialog.screenshot({ path: info.outputPath('payment-mobile.png') });
+  await dialog.getByLabel('شماره پیگیری واریز').fill('123456789012');
+  await dialog.getByLabel('زمان واریز').fill('2026-10-20T14:30');
+  await dialog.getByRole('button', { name: 'ثبت اطلاعات واریز', exact: true }).click();
+  await expect(dialog.getByText('واریز اعلام شده؛ در انتظار بررسی', { exact: true })).toBeVisible();
+  expect(state.payment?.status).toBe('SUBMITTED');
+  expect(calls.find(c => c.route.endsWith('/payment/report'))?.body).toMatchObject({ bankReference: '123456789012' });
+});
+
+test("driver can send an inspected parts quote for customer approval", async ({ page }) => {
+  const user = makeUser('DRIVER');
+  const { calls, state } = await mockBackend(page, user, [{ ...makeRequest(), status: 'ARRIVED', driverId: user.id }]);
+  await seedSession(page, user);
+  await open(page, 'http://localhost:3311/home');
+  await page.getByRole('button', { name: 'باز کردن منو', exact: true }).click();
+  await page.locator('.drawer-nav button').filter({ hasText: 'بارهای من' }).click();
+  await page.getByRole('tab', { name: /در حال انجام/ }).click();
+  await page.getByRole('button', { name: /ادامه.*بار/ }).click();
+  await page.getByLabel('مبلغ قطعات (تومان)').fill('۲۰۰۰۰۰');
+  await page.getByRole('button', { name: 'ارسال هزینه قطعات', exact: true }).click();
+  await expect.poll(() => state.requests[0].partsQuoteToman).toBe(200000);
+  expect(calls.find(c => c.route.endsWith('/parts-quote'))?.body).toEqual({ amountToman: 200000 });
+});
+
+test("completed request payment remains accessible from history after reopening", async ({ page }) => {
+  const user = makeUser('CUSTOMER');
+  await mockBackend(page, user, [{ ...makeRequest(), status: 'COMPLETED', driverId: 'DRIVER-user', partsQuoteToman: 0, partsApprovedToman: 0, partsQuoteVersion: 1 }]);
+  await seedSession(page, user);
+  await open(page, 'http://localhost:3310/home');
+  await page.getByRole('button', { name: 'باز کردن منو', exact: true }).click();
+  await page.locator('.drawer-nav button').filter({ hasText: 'تاریخچه' }).click();
+  await page.getByRole('button', { name: 'گزینه‌ها', exact: true }).click();
+  await page.locator('.pay-button').click();
+  const dialog = page.getByRole('dialog', { name: 'پرداخت کارت‌به‌کارت' });
+  await expect(dialog.locator('.payment-breakdown')).toContainText('۸۰۰٬۰۰۰ تومان');
+  await expect(dialog.locator('.payment-breakdown')).toContainText('۲۴۰٬۰۰۰ تومان');
+  await dialog.getByRole('button', { name: 'بستن', exact: true }).click();
+  await page.getByRole('button', { name: 'بازگشت', exact: true }).click();
+  await expect(page.locator('dialog.location-permission')).toBeVisible();
 });

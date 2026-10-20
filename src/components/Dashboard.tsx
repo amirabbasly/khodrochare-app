@@ -1,7 +1,9 @@
 "use client";
 
 import Image from "next/image";
-import { api, logout as backendLogout, errorMessage, requestStatus, type AssistanceRequest, type Vehicle } from "@/lib/api";
+import { AddressSearch, VehicleSearch } from "@/components/SearchFields";
+import { PaymentDialog } from "@/components/PaymentDialog";
+import { api, logout as backendLogout, errorMessage, requestStatus, type AssistanceRequest, type Vehicle, type Place, type VehicleModel, type PricingBreakdown } from "@/lib/api";
 import { useAuthenticatedUser, useLiveRequest } from "@/lib/use-backend";
 import { useCallback, useEffect, useState, type FormEvent, type ReactNode } from "react";
 import { LocationPermissionModal } from "@/components/LocationPermissionModal";
@@ -348,7 +350,7 @@ function WalletView({ balance, onAdd, onBack }: { balance: number; onAdd: (amoun
   </div>;
 }
 
-function HistoryView({ onBack }: { onBack: () => void }) {
+function HistoryView({ onBack, onOpen }: { onBack: () => void; onOpen: (request: AssistanceRequest) => void }) {
   const [filter, setFilter] = useState("همه");
   const [requests, setRequests] = useState<AssistanceRequest[]>([]);
   useEffect(() => {
@@ -358,7 +360,7 @@ function HistoryView({ onBack }: { onBack: () => void }) {
   }, []);
   const rows = requests.map(request => ({ title: request.vehicleName, date: new Date(request.createdAt).toLocaleString("fa-IR", { timeZone: "Asia/Tehran" }), status: request.status === "COMPLETED" ? "انجام‌شده" : request.status === "CANCELLED" ? "لغوشده" : "در انتظار", kind: request.service === "TOWING" ? "حمل خودرو" : "تعمیر در محل", icon: (request.service === "TOWING" ? "transport" : "roadside") as ServiceId, id: request.id }));
   const filteredRows = filter === "همه" ? rows : rows.filter((row) => row.status === filter);
-  return <div className="subpage"><PageTitle title="تاریخچهٔ درخواست‌ها" subtitle="همهٔ سرویس‌ها و پیگیری‌های تو اینجاست." onBack={onBack} /><div className="filter-tabs">{["همه", "در انتظار", "انجام‌شده"].map((item) => <button type="button" key={item} className={filter === item ? "is-active" : ""} onClick={() => setFilter(item)}>{item}</button>)}</div><section className="panel-card history-list">{filteredRows.map((row) => <article className="history-row" key={row.id}><ServiceIllustration type={row.icon} size="sm" /><div className="history-details"><span>{row.kind}</span><strong>{row.title}</strong><small><Icon name="calendar" size={13} />{row.date}</small></div><span className={`status-pill${row.status === "انجام‌شده" ? " status-pill--done" : ""}`}><i />{row.status}</span><button className="row-more" type="button" aria-label="گزینه‌ها"><Icon name="more" size={20} /></button></article>)}</section><div className="history-note"><Icon name="sparkles" size={18} /><span>با ثبت درخواست جدید، جزئیات آن همین‌جا نمایش داده می‌شود.</span></div></div>;
+  return <div className="subpage"><PageTitle title="تاریخچهٔ درخواست‌ها" subtitle="همهٔ سرویس‌ها و پیگیری‌های تو اینجاست." onBack={onBack} /><div className="filter-tabs">{["همه", "در انتظار", "انجام‌شده"].map((item) => <button type="button" key={item} className={filter === item ? "is-active" : ""} onClick={() => setFilter(item)}>{item}</button>)}</div><section className="panel-card history-list">{filteredRows.map((row) => <article className="history-row" key={row.id}><ServiceIllustration type={row.icon} size="sm" /><div className="history-details"><span>{row.kind}</span><strong>{row.title}</strong><small><Icon name="calendar" size={13} />{row.date}</small></div><span className={`status-pill${row.status === "انجام‌شده" ? " status-pill--done" : ""}`}><i />{row.status}</span><button className="row-more" type="button" aria-label="گزینه‌ها" disabled={row.status === "لغوشده"} onClick={() => { const request = requests.find(item => item.id === row.id); if (request) onOpen(request); }}><Icon name="more" size={20} /></button></article>)}</section><div className="history-note"><Icon name="sparkles" size={18} /><span>با ثبت درخواست جدید، جزئیات آن همین‌جا نمایش داده می‌شود.</span></div></div>;
 }
 
 function MarketView({ onBack, onToast }: { onBack: () => void; onToast: (message: string) => void }) {
@@ -497,27 +499,43 @@ function ServiceView({
   onRegister: (info: { car: string; problem: string; lat: number; lng: number; server: AssistanceRequest }) => void;
 }) {
   const [car, setCar] = useState("");
+  const [modelId, setModelId] = useState<string | null>(null);
+  const [originPlace, setOriginPlace] = useState<Place | null>(null);
+  const [destinationPlace, setDestinationPlace] = useState<Place | null>(null);
+  const [estimate, setEstimate] = useState<{ key: string; value?: { priceToman: number | null; distanceMeters: number; pricingBreakdown: PricingBreakdown }; error?: string } | null>(null);
   const [plate, setPlate] = useState("");
   const [transportKind, setTransportKind] = useState("NISSAN");
   const [heavyTraffic, setHeavyTraffic] = useState(false);
   const [rainOrSnow, setRainOrSnow] = useState(false);
   const [hasExtraLoad, setHasExtraLoad] = useState(false);
-  const [destination, setDestination] = useState<{ lat: number; lng: number } | null>(null);
   const [busy, setBusy] = useState(false);
   const [problem, setProblem] = useState("");
   const [coords, setCoords] = useState<{ lat: number; lng: number } | null>(null);
   const [noticeOpen, setNoticeOpen] = useState(true);
 
   const pickOrigin = useCallback((lat: number, lng: number) => setCoords({ lat, lng }), []);
-  const pickDestination = useCallback((lat: number, lng: number) => setDestination({ lat, lng }), []);
+  const towingBody = service.id === "transport" && modelId && originPlace && destinationPlace && plate.trim().length >= 4 ? { vehicleName: car, vehicleModelId: modelId, vehiclePlate: plate.trim(), origin: { latitude: originPlace.latitude, longitude: originPlace.longitude }, destination: { latitude: destinationPlace.latitude, longitude: destinationPlace.longitude }, originPlaceId: originPlace.id, destinationPlaceId: destinationPlace.id, transportKind, heavyTraffic, rainOrSnow, hasExtraLoad } : null;
+  const estimateKey = towingBody ? JSON.stringify(towingBody) : null;
+  useEffect(() => {
+    if (!estimateKey) return;
+    const controller = new AbortController();
+    const timer = window.setTimeout(() => {
+      api<{ priceToman: number | null; distanceMeters: number; pricingBreakdown: PricingBreakdown }>("/requests/towing/estimate", { method: "POST", body: JSON.parse(estimateKey), signal: controller.signal })
+        .then(value => { if (!controller.signal.aborted) setEstimate({ key: estimateKey, value }); })
+        .catch(error => { if (!controller.signal.aborted) setEstimate({ key: estimateKey, error: errorMessage(error) }); });
+    }, 500);
+    return () => { controller.abort(); window.clearTimeout(timer); };
+  }, [estimateKey]);
+  const currentEstimate = estimate?.key === estimateKey ? estimate : null;
   async function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     if (busy) return;
     if (!["roadside", "transport"].includes(service.id)) { onToast("ثبت درخواست این خدمت هنوز در سرور فعال نشده است."); return; }
-    if (!coords || (service.id === "transport" && !destination)) { onToast("مبدأ و مقصد موردنیاز را روی نقشه انتخاب کنید."); return; }
+    if ((service.id === "transport" && !towingBody) || (service.id !== "transport" && !coords)) { onToast("مبدأ و مقصد موردنیاز را انتخاب کنید."); return; }
+    if (service.id === "transport" && !currentEstimate?.value) { onToast(currentEstimate?.error || "ابتدا نام خودرو و آدرس‌های مبدأ و مقصد را انتخاب کنید و منتظر محاسبه مبلغ بمانید."); return; }
     setBusy(true);
     try {
-      const server = await api<AssistanceRequest>(`/requests/${service.id === "transport" ? "towing" : "repair"}`, { method: "POST", body: { vehicleName: car.trim(), vehiclePlate: plate.trim(), origin: { latitude: coords.lat, longitude: coords.lng }, ...(service.id === "transport" ? { destination: { latitude: destination!.lat, longitude: destination!.lng }, transportKind, heavyTraffic, rainOrSnow, hasExtraLoad } : { problem: problem.trim() }) } });
+      const server = await api<AssistanceRequest>(`/requests/${service.id === "transport" ? "towing" : "repair"}`, { method: "POST", body: service.id === "transport" ? towingBody : { vehicleName: car.trim(), vehiclePlate: plate.trim(), origin: { latitude: coords!.lat, longitude: coords!.lng }, problem: problem.trim() } });
       onRegister({ car, problem, lat: server.originLat, lng: server.originLng, server });
     } catch (error) { onToast(errorMessage(error)); }
     finally { setBusy(false); }
@@ -542,18 +560,12 @@ function ServiceView({
         <div className="request-heading">
           <span>درخواست خدمت</span>
           <h2>خودرو و مشکل را مشخص کن</h2>
-          <p>موقعیت دریافت خدمت را روی نقشه انتخاب کن؛ بقیه‌اش با ما.</p>
+          <p>{service.id === "transport" ? "مبدأ و مقصد را با نام شهر و خیابان پیدا کن." : "موقعیت دریافت خدمت را روی نقشه انتخاب کن؛ بقیه‌اش با ما."}</p>
         </div>
         <form className="service-request-form" onSubmit={submit}>
           <div className="service-request-grid">
             <div className="request-fields">
-              <label className="form-field">
-                <span className="field-label">خودروی شما</span>
-                <span className="field-control">
-                  <input value={car} onChange={(event) => setCar(event.target.value)} placeholder="نام خودرو" minLength={2} maxLength={100} required />
-                  <Icon name="chevron" size={15} />
-                </span>
-              </label>
+              {service.id === "transport" ? <VehicleSearch value={car} modelId={modelId} onChange={value => { setCar(value); setModelId(null); }} onSelect={(model: VehicleModel) => { setCar(model.name); setModelId(model.id); }} /> : <label className="form-field"><span className="field-label">خودروی شما</span><span className="field-control"><input value={car} onChange={event => setCar(event.target.value)} placeholder="نام خودرو" minLength={2} maxLength={100} required /></span></label>}
               <label className="form-field"><span className="field-label">پلاک خودرو</span><span className="field-control"><input value={plate} onChange={event => setPlate(event.target.value)} placeholder="۱۲ ب ۳۴۵ - ۶۷" minLength={4} maxLength={30} required /></span></label>
               {service.id === "transport" && <>
                 <label className="form-field"><span className="field-label">نوع حمل خودرو</span><span className="field-control"><select value={transportKind} onChange={event => setTransportKind(event.target.value)}><option value="NISSAN">نیسان جرثقیل</option><option value="FLATBED">کفی خودروبر</option></select></span></label>
@@ -576,11 +588,11 @@ function ServiceView({
                   <span className="map-frame-badge"><Icon name="pin" size={15} /></span>
                   <div className="map-frame-titles">
                     <strong>موقعیت دریافت خدمت</strong>
-                    <small>روی نقشه بزنید یا موقعیت خود را پیدا کنید</small>
+                    <small>{service.id === "transport" ? "نام شهر و خیابان را جست‌وجو و انتخاب کنید" : "روی نقشه بزنید یا موقعیت خود را پیدا کنید"}</small>
                   </div>
                   <span className="map-frame-tag"><Icon name="clock" size={12} /> امداد سریع</span>
                 </div>
-                <LocationPickerMap onPick={pickOrigin} onToast={onToast} />
+                {service.id === "transport" ? <AddressSearch label="مبدأ حمل (شهر و خیابان)" value={originPlace} onSelect={setOriginPlace} /> : <LocationPickerMap onPick={pickOrigin} onToast={onToast} />}
                 <div className="map-frame-foot">
                   <span><Icon name="shield" size={12} /> موقعیت شما فقط برای اعزام امدادگر استفاده می‌شود</span>
                   <span><Icon name="clock" size={12} /> حداکثر ۱۵ دقیقه تا رسیدن</span>
@@ -588,7 +600,8 @@ function ServiceView({
               </div>
             </div>
           </div>
-          {service.id === "transport" && <div className="request-map"><div className="map-frame"><div className="map-frame-head"><span className="map-frame-badge"><Icon name="pin" size={15} /></span><div className="map-frame-titles"><strong>مقصد حمل خودرو</strong><small>مقصد را روی نقشه انتخاب کنید</small></div></div><LocationPickerMap onPick={pickDestination} onToast={onToast} /></div></div>}
+          {service.id === "transport" && <div className="request-map"><div className="map-frame"><div className="map-frame-head"><span className="map-frame-badge"><Icon name="pin" size={15} /></span><div className="map-frame-titles"><strong>مقصد حمل خودرو</strong><small>نام شهر و خیابان مقصد را جست‌وجو کنید</small></div></div><AddressSearch label="مقصد حمل (شهر و خیابان)" value={destinationPlace} onSelect={setDestinationPlace} /></div></div>}
+          {service.id === "transport" && estimateKey && <p className="form-notice" role="status">{currentEstimate?.error || (currentEstimate?.value ? `مسافت ${(currentEstimate.value.distanceMeters / 1000).toLocaleString("fa-IR", { maximumFractionDigits: 1 })} کیلومتر · مبلغ ${currentEstimate.value.priceToman === null ? "توافقی" : `${currentEstimate.value.priceToman.toLocaleString("fa-IR")} تومان`}` : "در حال محاسبه مبلغ بر اساس مدل خودرو…")}</p>}
           <button className="primary-button request-submit" type="submit" disabled={busy} aria-busy={busy}>ثبت درخواست خدمت <Icon name="arrow-left" size={17} /></button>
         </form>
       </section>
@@ -613,13 +626,17 @@ function ServiceView({
 
 function WaitingView({
   request,
+  onBack,
   onCancel,
   onToast,
 }: {
   request: SubmittedRequest;
+  onBack: () => void;
   onCancel: () => void;
   onToast: (message: string) => void;
 }) {
+  const [payOpen, setPayOpen] = useState(false);
+  const [approving, setApproving] = useState(false);
   const live = useLiveRequest(request.server.id);
   const current = live.request || request.server;
   const distance = live.tracking.distanceToOriginMeters;
@@ -629,7 +646,7 @@ function WaitingView({
     <div className="waiting-page">
       <div className="page-title-row waiting-title-row">
         <div className="page-title-main">
-          <button className="back-button" type="button" onClick={onCancel} aria-label="بازگشت"><Icon name="arrow-right" size={19} /></button>
+          <button className="back-button" type="button" onClick={onBack} aria-label="بازگشت"><Icon name="arrow-right" size={19} /></button>
           <div><h1>در حال اعزام امدادگر</h1><p>{request.service.name} · {request.car}</p></div>
         </div>
       </div>
@@ -683,12 +700,14 @@ function WaitingView({
           </div>
         </article>
 
-        <button type="button" className="pay-button" onClick={() => onToast("پرداخت امن پس از انجام خدمت فعال می‌شود.")}>
+        {current.service === "REPAIR" && current.partsQuoteToman != null && current.partsApprovedToman == null && <section className="parts-quote-panel"><p>پیشنهاد هزینه قطعات: {current.partsQuoteToman.toLocaleString("fa-IR")} تومان؛ مبلغ خدمت و قطعات پس از تأیید شما برای پرداخت آماده می‌شود.</p><button className="primary-button" type="button" disabled={approving} onClick={async () => { setApproving(true); try { await api(`/requests/${current.id}/parts-quote/approve`, { method: "POST", body: { version: current.partsQuoteVersion } }); onToast("هزینه قطعات تأیید شد."); } catch (error) { onToast(errorMessage(error)); } finally { setApproving(false); } }}>تأیید هزینه قطعات</button></section>}
+        {payOpen && <PaymentDialog requestId={current.id} onClose={() => setPayOpen(false)} />}
+        <button type="button" className="pay-button" onClick={() => setPayOpen(true)}>
           <Icon name="wallet" size={16} /> پرداخت
         </button>
 
         <TrustWarning />
-        <button type="button" className="waiting-cancel" onClick={onCancel}>انصراف از درخواست</button>
+        {["COMPLETED", "CANCELLED"].includes(current.status) ? <button type="button" className="waiting-cancel" onClick={onBack}>بازگشت به خانه</button> : <button type="button" className="waiting-cancel" onClick={onCancel}>انصراف از درخواست</button>}
       </section>
     </div>
   );
@@ -774,7 +793,7 @@ export default function Dashboard() {
   switch (view) {
     case "home": content = <HomeView latestRequest={latestRequest} balance={balance} onService={openService} onNavigate={navigate} onToast={notify} />; break;
     case "wallet": content = <WalletView balance={balance} onAdd={addBalance} onBack={() => navigate("home")} />; break;
-    case "history": content = <HistoryView onBack={() => navigate("home")} />; break;
+    case "history": content = <HistoryView onBack={() => navigate("home")} onOpen={server => { const service = services.find(item => item.id === (server.service === "TOWING" ? "transport" : "roadside"))!; setRequest({ service, car: server.vehicleName, problem: server.problem || "", lat: server.originLat, lng: server.originLng, server }); navigate("waiting"); }} />; break;
     case "market": content = <MarketView onBack={() => navigate("home")} onToast={notify} />; break;
     case "hall": content = <HallView onBack={() => navigate("home")} onToast={notify} />; break;
     case "profile": content = <ProfileView name={userName} username={username} phone={userPhone} onSave={saveProfile} onBack={() => navigate("home")} onToast={notify} />; break;
@@ -785,7 +804,7 @@ export default function Dashboard() {
     case "notifications": content = <NotificationsView onBack={() => navigate("home")} onToast={notify} />; break;
     case "service": content = <ServiceView service={selectedService} onBack={() => navigate("home")} onToast={notify} onRegister={(info) => { setLatestRequest(info.server); setRequest({ service: selectedService, ...info }); navigate("waiting"); }} />; break;
     case "waiting": content = request
-      ? <WaitingView request={request} onToast={notify} onCancel={cancelRequest} />
+      ? <WaitingView request={request} onBack={() => navigate("home")} onToast={notify} onCancel={cancelRequest} />
       : <HomeView latestRequest={latestRequest} balance={balance} onService={openService} onNavigate={navigate} onToast={notify} />; break;
     default: content = <HomeView latestRequest={latestRequest} balance={balance} onService={openService} onNavigate={navigate} onToast={notify} />;
   }
