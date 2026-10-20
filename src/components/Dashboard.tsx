@@ -4,6 +4,7 @@ import Image from "next/image";
 import { api, logout as backendLogout, errorMessage, requestStatus, type AssistanceRequest, type Vehicle } from "@/lib/api";
 import { useAuthenticatedUser, useLiveRequest } from "@/lib/use-backend";
 import { useCallback, useEffect, useState, type FormEvent, type ReactNode } from "react";
+import { LocationPermissionModal } from "@/components/LocationPermissionModal";
 import { useRouter } from "next/navigation";
 import { BrandLogo, Icon } from "@/components/Icons";
 import { AiMascot, MiniCar } from "@/components/Artwork";
@@ -497,6 +498,10 @@ function ServiceView({
 }) {
   const [car, setCar] = useState("");
   const [plate, setPlate] = useState("");
+  const [transportKind, setTransportKind] = useState("NISSAN");
+  const [heavyTraffic, setHeavyTraffic] = useState(false);
+  const [rainOrSnow, setRainOrSnow] = useState(false);
+  const [hasExtraLoad, setHasExtraLoad] = useState(false);
   const [destination, setDestination] = useState<{ lat: number; lng: number } | null>(null);
   const [busy, setBusy] = useState(false);
   const [problem, setProblem] = useState("");
@@ -512,7 +517,7 @@ function ServiceView({
     if (!coords || (service.id === "transport" && !destination)) { onToast("مبدأ و مقصد موردنیاز را روی نقشه انتخاب کنید."); return; }
     setBusy(true);
     try {
-      const server = await api<AssistanceRequest>(`/requests/${service.id === "transport" ? "towing" : "repair"}`, { method: "POST", body: { vehicleName: car.trim(), vehiclePlate: plate.trim(), origin: { latitude: coords.lat, longitude: coords.lng }, ...(service.id === "transport" ? { destination: { latitude: destination!.lat, longitude: destination!.lng } } : { problem: problem.trim() }) } });
+      const server = await api<AssistanceRequest>(`/requests/${service.id === "transport" ? "towing" : "repair"}`, { method: "POST", body: { vehicleName: car.trim(), vehiclePlate: plate.trim(), origin: { latitude: coords.lat, longitude: coords.lng }, ...(service.id === "transport" ? { destination: { latitude: destination!.lat, longitude: destination!.lng }, transportKind, heavyTraffic, rainOrSnow, hasExtraLoad } : { problem: problem.trim() }) } });
       onRegister({ car, problem, lat: server.originLat, lng: server.originLng, server });
     } catch (error) { onToast(errorMessage(error)); }
     finally { setBusy(false); }
@@ -550,6 +555,14 @@ function ServiceView({
                 </span>
               </label>
               <label className="form-field"><span className="field-label">پلاک خودرو</span><span className="field-control"><input value={plate} onChange={event => setPlate(event.target.value)} placeholder="۱۲ ب ۳۴۵ - ۶۷" minLength={4} maxLength={30} required /></span></label>
+              {service.id === "transport" && <>
+                <label className="form-field"><span className="field-label">نوع حمل خودرو</span><span className="field-control"><select value={transportKind} onChange={event => setTransportKind(event.target.value)}><option value="NISSAN">نیسان جرثقیل</option><option value="FLATBED">کفی خودروبر</option></select></span></label>
+                <label className="check-label"><input type="checkbox" checked={heavyTraffic} onChange={event => setHeavyTraffic(event.target.checked)} /><span>ترافیک سنگین (۲۰٪ اضافه)</span></label>
+                <label className="check-label"><input type="checkbox" checked={rainOrSnow} onChange={event => setRainOrSnow(event.target.checked)} /><span>برف یا باران (۲۰٪ اضافه)</span></label>
+                <label className="check-label"><input type="checkbox" checked={hasExtraLoad} onChange={event => setHasExtraLoad(event.target.checked)} /><span>خودرو بار یا وزن اضافه دارد (توافقی)</span></label>
+                <p className="form-notice">ورودی و کرایه هر کیلومتر بر اساس گروه خودرو محاسبه می‌شود. بین ساعت ۰۰ تا ۰۶ به وقت تهران ۲۰٪ اضافه می‌شود؛ درصد شرایط ویژه با هم جمع می‌شوند. خودروهای فاقد تعرفه مشخص، توافقی هستند.</p>
+              </>}
+              {service.id === "roadside" && <p className="form-notice">ورودی تعمیر در محل برای همه خودروها ۸۰۰٬۰۰۰ تومان است. هزینه قطعات پس از بررسی خودرو جداگانه محاسبه می‌شود.</p>}
               <label className="form-field">
                 <span className="field-label">{service.id === "transport" ? "توضیحات حمل (اختیاری)" : "مشکل خودرو"}</span>
                 <span className="field-control field-control--area">
@@ -654,8 +667,11 @@ function WaitingView({
             <span className="driver-vehicle"><Icon name="car" size={13} /> {live.tracking.stale ? "موقعیت تازه در دسترس نیست" : current.driverId ? "موقعیت زنده امدادگر" : "هنوز امدادگری تخصیص داده نشده"}</span>
           </div>
           <div className="driver-side">
-            <strong>{current.priceToman === null ? "—" : current.priceToman.toLocaleString("fa-IR")} <small>تومان</small></strong>
-            <small>هزینهٔ تخمینی</small>
+            <strong>{current.priceToman === null ? "توافقی" : current.priceToman.toLocaleString("fa-IR")} <small>تومان</small></strong>
+            <small>{current.service === "REPAIR" ? "ورودی تعمیر در محل" : "هزینه حمل خودرو"}</small>
+            {current.service === "REPAIR" && <small>قطعات پس از بررسی خودرو محاسبه می‌شوند.</small>}
+            {current.pricingBreakdown?.perKmToman && <small>ورودی {current.pricingBreakdown.baseToman?.toLocaleString("fa-IR")} + هر کیلومتر {current.pricingBreakdown.perKmToman.toLocaleString("fa-IR")} تومان</small>}
+            {!!current.pricingBreakdown?.surchargePercent && <small>{current.pricingBreakdown.surchargePercent.toLocaleString("fa-IR")}٪ شرایط ویژه</small>}
             <div className="driver-actions">
               <button type="button" className="driver-call" onClick={() => onToast("تماس با امدادگر در نسخهٔ کامل فعال می‌شود.")}>
                 <Icon name="phone" size={14} /> تماس
@@ -694,6 +710,7 @@ function AIChat({ open, setOpen }: { open: boolean; setOpen: (open: boolean) => 
 export default function Dashboard() {
   const router = useRouter();
   const [view, setView] = useState<View>("home");
+  const [homeVisit, setHomeVisit] = useState(0);
   const [selectedService, setSelectedService] = useState<Service>(services[0]);
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [chatOpen, setChatOpen] = useState(false);
@@ -726,6 +743,7 @@ export default function Dashboard() {
   }
 
   function navigate(next: View) {
+    if (next === "home") setHomeVisit(value => value + 1);
     setView(next);
     setDrawerOpen(false);
     setToast("");
@@ -774,6 +792,7 @@ export default function Dashboard() {
 
   return (
     <div className="app-frame" dir="rtl">
+      {user && <LocationPermissionModal key={homeVisit} />}
       <header className="app-header">
         <div className="app-header-inner">
           <div className="header-menu-wrap"><button className={`menu-button${drawerOpen ? " menu-button--active" : ""}`} type="button" onClick={() => setDrawerOpen(true)} aria-label="باز کردن منو"><span /><span /><span /></button><span className="menu-word">منو</span></div>

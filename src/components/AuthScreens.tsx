@@ -3,8 +3,8 @@
 import Image from "next/image";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useState, type FormEvent } from "react";
-import { login, register, saveSession, normalizePhone, latinDigits, validNationalId, errorMessage } from "@/lib/api";
+import { useEffect, useState, type FormEvent } from "react";
+import { api, type User, login, register, saveSession, normalizePhone, latinDigits, validNationalId, errorMessage } from "@/lib/api";
 import { BrandLogo, Icon } from "@/components/Icons";
 
 function AuthVisual() {
@@ -91,6 +91,11 @@ function Field({
 
 export function LoginScreen() {
   const router = useRouter();
+  useEffect(() => {
+    const controller = new AbortController();
+    api<User>("/me", { signal: controller.signal }).then(() => { if (!controller.signal.aborted) router.replace("/home"); }).catch(() => {});
+    return () => controller.abort();
+  }, [router]);
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
   const [passwordVisible, setPasswordVisible] = useState(false);
@@ -104,7 +109,7 @@ export function LoginScreen() {
     if (busy) return;
     setError(""); setNotice(""); setBusy(true);
     try {
-      const session = await login(username, password);
+      const session = await login(username, password, remember);
       saveSession(session, remember);
       router.replace("/home");
     } catch (error) { setError(errorMessage(error)); }
@@ -143,6 +148,11 @@ export function LoginScreen() {
 
 export function RegisterScreen() {
   const router = useRouter();
+  useEffect(() => {
+    const controller = new AbortController();
+    api<User>("/me", { signal: controller.signal }).then(() => { if (!controller.signal.aborted) router.replace("/home"); }).catch(() => {});
+    return () => controller.abort();
+  }, [router]);
   const [name, setName] = useState("");
   const [phone, setPhone] = useState("");
   const [password, setPassword] = useState("");

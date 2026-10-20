@@ -5,11 +5,11 @@ const makeUser = (role: "CUSTOMER" | "DRIVER") => ({ id: `${role}-user`, role, f
 type TestUser = ReturnType<typeof makeUser>;
 type TestRequest = { id: string; status: string; service: string; customerId: string; driverId: string | null; vehicleName: string; vehiclePlate: string; originLat: number; originLng: number; destinationLat: number | null; destinationLng: number | null; distanceMeters: number | null; priceToman: number | null; problem: string | null; createdAt: string; updatedAt: string };
 function makeRequest(): TestRequest {
-  return { id: "request-1", status: "PENDING", service: "REPAIR", customerId: "CUSTOMER-user", driverId: null, vehicleName: "پژو ۲۰۶", vehiclePlate: "12 ب 345 - 67", originLat: 35.7, originLng: 51.4, destinationLat: null, destinationLng: null, distanceMeters: null, priceToman: null, problem: "خودرو روشن نمی‌شود", createdAt: new Date().toISOString(), updatedAt: new Date().toISOString() };
+  return { id: "request-1", status: "PENDING", service: "REPAIR", customerId: "CUSTOMER-user", driverId: null, vehicleName: "پژو ۲۰۶", vehiclePlate: "12 ب 345 - 67", originLat: 35.7, originLng: 51.4, destinationLat: null, destinationLng: null, distanceMeters: null, priceToman: 800000, problem: "خودرو روشن نمی‌شود", createdAt: new Date().toISOString(), updatedAt: new Date().toISOString() };
 }
 async function mockBackend(page: Page, user: TestUser, seed: TestRequest[] = []) {
   const calls: { route: string; method: string; body: Record<string, unknown> | null }[] = [];
-  const state = { requests: seed, gps: false };
+  const state = { requests: seed, gps: false, cookieAuthenticated: false };
   await page.route("**/socket.io/**", route => route.abort());
   await page.route("https://tile.openstreetmap.org/**", route => route.abort());
   await page.route(`${endpoint}/**`, async route => {
@@ -21,7 +21,7 @@ async function mockBackend(page: Page, user: TestUser, seed: TestRequest[] = [])
     const send = (data: unknown, status = 200) => route.fulfill({ status, contentType: "application/json", body: JSON.stringify(data) });
     if (method === "OPTIONS") return route.fulfill({ status: 204 });
     if (suffix.includes("/login") || suffix.includes("/register")) return send({ token: "a".repeat(64), expiresAt: new Date(Date.now() + 86400000).toISOString(), user }, suffix.endsWith("register") ? 201 : 200);
-    if (suffix !== "/documents" && req.headers().authorization !== `Bearer ${"a".repeat(64)}`) return send({ error: "Authentication required" }, 401);
+    if (suffix !== "/documents" && req.headers().authorization !== `Bearer ${"a".repeat(64)}` && !state.cookieAuthenticated) return send({ error: "Authentication required" }, 401);
     if (suffix === "/me") return send(user);
     if (suffix === "/documents") return send({ id: "c9a7152f-41d8-4fc5-a69c-6ae71152d474", token: "b".repeat(64), expiresInSeconds: 86400 }, 201);
     if (suffix === "/drivers/location") { state.gps = true; return send({ recordedAt: new Date().toISOString() }); }
@@ -46,6 +46,10 @@ async function mockBackend(page: Page, user: TestUser, seed: TestRequest[] = [])
 async function open(page: Page, url: string) {
   await page.goto(url);
   await page.locator(".launch-splash").waitFor({ state: "detached" });
+  if (url.endsWith("/home")) await dismissLocation(page);
+}
+async function dismissLocation(page: Page) {
+  await page.getByRole("button", { name: "فعلاً ادامه بدون موقعیت", exact: true }).click();
 }
 async function seedSession(page: Page, user: TestUser) {
   await page.addInitScript(({ user }) => {
@@ -97,6 +101,7 @@ test("driver login, GPS, acceptance and status changes use real API contracts", 
   await page.getByLabel("رمز عبور", { exact: true }).fill("password123");
   await page.getByRole("button", { name: "ورود به حساب" }).click();
   await expect(page).toHaveURL(/\/home$/);
+  await dismissLocation(page);
   await page.locator(".header-ready-switch").click();
   await page.getByRole("button", { name: "تأیید و گرفتن بار" }).click();
   await expect(page.locator(".job-layout")).toBeVisible();
@@ -190,4 +195,46 @@ test("accepted customer request restores server distance after reopening", async
   await expect(page.locator(".waiting-page")).toBeVisible();
   await expect(page.locator(".waiting-timer-digits")).toContainText("۱٫۴");
   await expect(page.locator(".waiting-timer-label")).toHaveText("امدادگر در مسیر شماست");
+});
+
+for (const [role, port] of [["CUSTOMER", 3310], ["DRIVER", 3311]] as const) {
+  test(`${role} location dialog requests GPS and opens again on returning home`, async ({ page, context }) => {
+    const user = makeUser(role);
+    await mockBackend(page, user);
+    await seedSession(page, user);
+    await context.grantPermissions(["geolocation"]);
+    await context.setGeolocation({ latitude: 35.72, longitude: 51.42 });
+    await page.goto(`http://localhost:${port}/home`);
+    await page.locator(".launch-splash").waitFor({ state: "detached" });
+    await expect(page.getByRole("dialog", { name: "دسترسی به موقعیت مکانی" })).toBeVisible();
+    await page.getByRole("button", { name: "اجازه دسترسی به موقعیت", exact: true }).click();
+    await expect(page.locator("dialog.location-permission")).not.toBeVisible();
+    const position = await page.evaluate(() => JSON.parse(sessionStorage.getItem("khodrochare_location_v1") || "null"));
+    expect(position.latitude).toBe(35.72);
+    await page.getByRole("button", { name: "بازگشت به خانه", exact: true }).click();
+    await expect(page.locator("dialog.location-permission")).toBeVisible();
+    await dismissLocation(page);
+  });
+  test(`${role} cookie session restores login without a saved bearer token`, async ({ page }) => {
+    const { state } = await mockBackend(page, makeUser(role));
+    state.cookieAuthenticated = true;
+    await page.goto(`http://localhost:${port}/`);
+    await expect(page).toHaveURL(/\/home$/);
+    await expect(page.locator("dialog.location-permission")).toBeVisible();
+    const session = await page.evaluate(role => JSON.parse(localStorage.getItem(`khodrochare_${role.toLowerCase()}_session_v2`) || "null"), role);
+    expect(session.user.role).toBe(role);
+    expect(session.token).toBe("");
+  });
+}
+
+test("driver service choices and complete Iran flag fit on mobile", async ({ page }, info) => {
+  await mockBackend(page, makeUser("DRIVER"));
+  await page.setViewportSize({ width: 390, height: 844 });
+  await open(page, "http://localhost:3311/register");
+  await expect(page.locator(".plate-flag img")).toHaveAttribute("src", "/iran-flag.svg");
+  expect(await page.locator(".plate-flag img").evaluate((img: HTMLImageElement) => img.complete && img.naturalWidth > 0)).toBe(true);
+  await page.locator(".service-picker").scrollIntoViewIfNeeded();
+  await expect(page.locator(".service-picker-item")).toHaveCount(5);
+  expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);
+  await page.locator(".service-picker").screenshot({ path: info.outputPath("driver-services-mobile.png") });
 });
