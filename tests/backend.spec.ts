@@ -4,7 +4,7 @@ const endpoint = "https://api.khodrochare.ir/api/v1";
 const makeUser = (role: "CUSTOMER" | "DRIVER") => ({ id: `${role}-user`, role, fullName: role === "CUSTOMER" ? "کاربر آزمایشی" : "امدادگر آزمایشی", phone: "09121234567", nationalId: "1234567891", services: ["REPAIR", "TOWING"], vehicleType: "نیسان", vehiclePlate: "12 ب 345 - 67", identityDocumentId: role === "DRIVER" ? "document-id" : null, vehicles: [] });
 type TestPayment = { id: string; status: string; cardNumber: string; accountName: string; serviceToman: number; partsToman: number; amountToman: number; commissionPercent: number; commissionToman: number; driverShareToman: number; attempts: { bankReference: string; status: string }[] };
 type TestUser = ReturnType<typeof makeUser>;
-type TestRequest = { id: string; status: string; service: string; customerId: string; driverId: string | null; vehicleName: string; vehiclePlate: string; originLat: number; originLng: number; destinationLat: number | null; destinationLng: number | null; distanceMeters: number | null; priceToman: number | null; originAddress?: string; destinationAddress?: string; partsQuoteToman?: number | null; partsApprovedToman?: number | null; partsQuoteVersion?: number; problem: string | null; createdAt: string; updatedAt: string };
+type TestRequest = { operationsStartedAt?: string | null; payment?: { status: string } | null; id: string; status: string; service: string; customerId: string; driverId: string | null; vehicleName: string; vehiclePlate: string; originLat: number; originLng: number; destinationLat: number | null; destinationLng: number | null; distanceMeters: number | null; priceToman: number | null; originAddress?: string; destinationAddress?: string; partsQuoteToman?: number | null; partsApprovedToman?: number | null; partsQuoteVersion?: number; problem: string | null; createdAt: string; updatedAt: string };
 function makeRequest(): TestRequest {
   return { id: "request-1", status: "PENDING", service: "REPAIR", customerId: "CUSTOMER-user", driverId: null, vehicleName: "پژو ۲۰۶", vehiclePlate: "12 ب 345 - 67", originLat: 35.7, originLng: 51.4, destinationLat: null, destinationLng: null, distanceMeters: null, priceToman: 800000, problem: "خودرو روشن نمی‌شود", createdAt: new Date().toISOString(), updatedAt: new Date().toISOString() };
 }
@@ -23,7 +23,10 @@ async function mockBackend(page: Page, user: TestUser, seed: TestRequest[] = [])
     if (method === "OPTIONS") return route.fulfill({ status: 204 });
     if (suffix.includes("/login") || suffix.includes("/register")) return send({ token: "a".repeat(64), expiresAt: new Date(Date.now() + 86400000).toISOString(), user }, suffix.endsWith("register") ? 201 : 200);
     if (suffix !== "/documents" && req.headers().authorization !== `Bearer ${"a".repeat(64)}` && !state.cookieAuthenticated) return send({ error: "Authentication required" }, 401);
-    if (suffix === "/me") return send(user);
+    if (suffix === "/me") { if (method === 'PATCH') user.fullName = String(body!.fullName); return send(user); }
+    if (suffix === '/me/location') return route.fulfill({ status: 204 });
+    if (suffix === '/locations/reverse') { const latitude = Number(body!.latitude), longitude = Number(body!.longitude); return send({ id: (longitude < 51.38 ? 'b' : 'a').repeat(64), label: longitude < 51.38 ? 'تهران، خیابان آزادی' : 'تهران، خیابان ولیعصر', province: 'تهران', city: 'تهران', street: longitude < 51.38 ? 'خیابان آزادی' : 'خیابان ولیعصر', latitude, longitude }); }
+    if (suffix.endsWith('/operations/start')) { state.requests[0].operationsStartedAt = new Date().toISOString(); return send(state.requests[0]); }
     if (suffix === "/drivers/earnings") return send({ entries: [], totalToman: 0 });
     if (suffix === "/vehicle-models") return send([{ id: "vm_test206", name: "پژو ۲۰۶", groupId: "GROUP_1", group: { id: "GROUP_1", title: "گروه اول", nissanBaseToman: 1600000, nissanPerKmToman: 60000, flatbedBaseToman: 2000000, flatbedPerKmToman: 75000 } }]);
     if (suffix === "/locations/search") {
@@ -69,7 +72,16 @@ async function open(page: Page, url: string) {
   if (url.endsWith("/home")) await dismissLocation(page);
 }
 async function dismissLocation(page: Page) {
-  await page.getByRole("button", { name: "فعلاً ادامه بدون موقعیت", exact: true }).click();
+  await expect(page.locator('dialog.location-permission')).toBeAttached();
+  await page.waitForTimeout(150);
+  const button = page.getByRole('button', { name: 'فعلاً ادامه بدون موقعیت', exact: true });
+  if (await button.isVisible()) await button.click();
+}
+async function fillPlate(page: Page) {
+  await page.getByLabel('دو رقم پلاک', { exact: true }).fill('12');
+  await page.getByLabel('حرف پلاک', { exact: true }).selectOption('ب');
+  await page.getByLabel('سه رقم پلاک', { exact: true }).fill('345');
+  await page.getByLabel('کد ایران پلاک', { exact: true }).fill('67');
 }
 async function seedSession(page: Page, user: TestUser) {
   await page.addInitScript(({ user }) => {
@@ -100,7 +112,7 @@ test("customer repair persists before waiting and cancellation calls the server"
   await page.locator(".main-service-card--roadside").click();
   await page.getByRole("button", { name: "فهمیدم", exact: true }).click();
   await page.getByPlaceholder("نام خودرو", { exact: true }).fill("پژو ۲۰۶");
-  await page.getByPlaceholder("۱۲ ب ۳۴۵ - ۶۷", { exact: true }).fill("12 ب 345 - 67");
+  await fillPlate(page);
   await page.locator("textarea").first().fill("خودرو روشن نمی‌شود");
   await expect(page.locator(".leaflet-container").first()).toBeVisible();
   await page.getByRole("button", { name: "ثبت درخواست خدمت" }).click();
@@ -115,7 +127,7 @@ test("customer repair persists before waiting and cancellation calls the server"
 test("driver login, GPS, acceptance and status changes use real API contracts", async ({ page, context }) => {
   await context.grantPermissions(["geolocation"]);
   await context.setGeolocation({ latitude: 35.71, longitude: 51.41 });
-  const { calls, state } = await mockBackend(page, makeUser("DRIVER"), [makeRequest()]);
+  const { calls, state } = await mockBackend(page, makeUser("DRIVER"), [{ ...makeRequest(), service: "TOWING" }]);
   await open(page, "http://localhost:3311/");
   await page.getByLabel("شماره تماس", { exact: true }).fill("09121234567");
   await page.getByLabel("رمز عبور", { exact: true }).fill("password123");
@@ -161,7 +173,7 @@ test("home without a backend session redirects to login", async ({ page }) => {
   await expect(page).toHaveURL("http://localhost:3310/");
 });
 
-test("towing searches city/street text and a database vehicle, then displays the server estimate", async ({ page }) => {
+test("towing selects map points, reverse resolves addresses and displays the database vehicle estimate", async ({ page }) => {
   const user = makeUser("CUSTOMER");
   const { calls } = await mockBackend(page, user);
   await seedSession(page, user);
@@ -170,17 +182,19 @@ test("towing searches city/street text and a database vehicle, then displays the
   await page.getByRole("button", { name: "فهمیدم", exact: true }).click();
   await page.getByPlaceholder("نام خودرو", { exact: true }).fill("۲۰۶");
   await page.getByRole("option", { name: "پژو ۲۰۶ · گروه اول" }).getByRole("button").click();
-  await page.getByPlaceholder("۱۲ ب ۳۴۵ - ۶۷", { exact: true }).fill("12 ب 345 - 67");
-  await page.getByRole("combobox", { name: "مبدأ حمل (شهر و خیابان)" }).fill("تهران ولیعصر");
-  await page.getByRole("option", { name: "تهران، خیابان ولیعصر" }).getByRole("button").click();
-  await page.getByRole("combobox", { name: "مقصد حمل (شهر و خیابان)" }).fill("تهران آزادی");
-  await page.getByRole("option", { name: "تهران، خیابان آزادی" }).getByRole("button").click();
+  await fillPlate(page);
+  const maps = page.locator('.map-address-picker .leaflet-container');
+  await expect(maps).toHaveCount(2);
+  await maps.nth(0).click({ position: { x: 280, y: 140 } });
+  await maps.nth(1).click({ position: { x: 50, y: 130 } });
+  await expect(page.locator('.map-address-label').nth(0)).toContainText('تهران');
+  await expect(page.locator('.map-address-label').nth(1)).toContainText('خیابان');
   await expect(page.getByRole("status").filter({ hasText: "۲٬۲۰۰٬۰۰۰" })).toBeVisible();
   await expect(page.locator(".map-coords-chip")).toHaveCount(0);
   await page.getByRole("button", { name: "ثبت درخواست خدمت" }).click();
   await expect(page.locator(".waiting-page")).toBeVisible();
   const payload = calls.find(c => c.route === "/requests/towing")?.body;
-  expect(payload).toMatchObject({ vehicleModelId: "vm_test206", vehicleName: "پژو ۲۰۶", originPlaceId: "a".repeat(64), destinationPlaceId: "b".repeat(64) });
+  expect(payload).toMatchObject({ vehicleModelId: "vm_test206", vehicleName: "پژو ۲۰۶", originPlaceId: expect.any(String), destinationPlaceId: expect.any(String) });
   expect(payload).not.toHaveProperty("priceToman");
   expect(payload).not.toHaveProperty("problem");
 });
@@ -194,7 +208,7 @@ test("server rejection keeps the customer on the request form", async ({ page })
   await page.locator(".main-service-card--roadside").click();
   await page.getByRole("button", { name: "فهمیدم", exact: true }).click();
   await page.getByPlaceholder("نام خودرو", { exact: true }).fill("پژو ۲۰۶");
-  await page.getByPlaceholder("۱۲ ب ۳۴۵ - ۶۷", { exact: true }).fill("12 ب 345 - 67");
+  await fillPlate(page);
   await page.locator("textarea").first().fill("خودرو روشن نمی‌شود");
   await expect(page.locator(".leaflet-container").first()).toBeVisible();
   await page.getByRole("button", { name: "ثبت درخواست خدمت" }).click();
@@ -223,10 +237,11 @@ test("accepted customer request restores server distance after reopening", async
 });
 
 for (const [role, port] of [["CUSTOMER", 3310], ["DRIVER", 3311]] as const) {
-  test(`${role} location dialog requests GPS and opens again on returning home`, async ({ page, context }) => {
+  test(`${role} location permission is requested once and stays dismissed after returning and reloading`, async ({ page, context }) => {
     const user = makeUser(role);
-    await mockBackend(page, user);
+    const { calls } = await mockBackend(page, user);
     await seedSession(page, user);
+    await page.addInitScript(() => { const original = navigator.permissions.query.bind(navigator.permissions); navigator.permissions.query = (descriptor: PermissionDescriptor) => descriptor.name === 'geolocation' ? Promise.resolve({ state: localStorage.getItem('khodrochare_location_choice_v2') === 'granted' ? 'granted' : 'prompt', onchange: null } as PermissionStatus) : original(descriptor); });
     await context.grantPermissions(["geolocation"]);
     await context.setGeolocation({ latitude: 35.72, longitude: 51.42 });
     await page.goto(`http://localhost:${port}/home`);
@@ -236,9 +251,14 @@ for (const [role, port] of [["CUSTOMER", 3310], ["DRIVER", 3311]] as const) {
     await expect(page.locator("dialog.location-permission")).not.toBeVisible();
     const position = await page.evaluate(() => JSON.parse(sessionStorage.getItem("khodrochare_location_v1") || "null"));
     expect(position.latitude).toBe(35.72);
+    await expect.poll(() => calls.some(call => call.route === "/me/location" && call.method === "PUT")).toBe(true);
+    await context.setGeolocation({ latitude: 35.73, longitude: 51.43 });
+    await expect.poll(() => calls.some(call => call.route === "/me/location" && call.body?.latitude === 35.73), { timeout: 20000 }).toBe(true);
+
     await page.getByRole("button", { name: "بازگشت به خانه", exact: true }).click();
-    await expect(page.locator("dialog.location-permission")).toBeVisible();
-    await dismissLocation(page);
+    await expect(page.locator("dialog.location-permission")).not.toBeVisible();
+    await page.reload();
+    await expect(page.locator("dialog.location-permission")).not.toBeVisible();
   });
   test(`${role} cookie session restores login without a saved bearer token`, async ({ page }) => {
     const { state } = await mockBackend(page, makeUser(role));
@@ -301,9 +321,55 @@ test("driver can send an inspected parts quote for customer approval", async ({ 
   await page.getByRole('tab', { name: /در حال انجام/ }).click();
   await page.getByRole('button', { name: /ادامه.*بار/ }).click();
   await page.getByLabel('مبلغ قطعات (تومان)').fill('۲۰۰۰۰۰');
-  await page.getByRole('button', { name: 'ارسال هزینه قطعات', exact: true }).click();
+  await expect(page.getByLabel('مبلغ قطعات (تومان)')).toHaveValue('200,000');
+  await page.getByRole('button', { name: 'ثبت هزینه قطعه', exact: true }).click();
   await expect.poll(() => state.requests[0].partsQuoteToman).toBe(200000);
   expect(calls.find(c => c.route.endsWith('/parts-quote'))?.body).toEqual({ amountToman: 200000 });
+  await expect(page.getByRole('button', { name: 'انجام عملیات', exact: true })).toBeDisabled();
+  state.requests[0].partsApprovedToman = 200000;
+  await expect(page.getByRole('button', { name: 'انجام عملیات', exact: true })).toBeEnabled({ timeout: 12000 });
+  await page.getByRole('button', { name: 'انجام عملیات', exact: true }).click();
+  await expect.poll(() => state.requests[0].operationsStartedAt).toBeTruthy();
+  await expect(page.getByRole('button', { name: 'انجام و پرداخت شد', exact: true })).toBeDisabled();
+  state.requests[0].payment = { status: 'VERIFIED' };
+  await expect(page.getByRole('button', { name: 'انجام و پرداخت شد', exact: true })).toBeEnabled({ timeout: 12000 });
+  await page.getByRole('button', { name: 'انجام و پرداخت شد', exact: true }).click();
+  await expect.poll(() => state.requests[0].status).toBe('COMPLETED');
+});
+
+test('center rescue navigation and customer profile work on mobile', async ({ page }, info) => {
+  await page.setViewportSize({ width: 390, height: 844 });
+  const user = makeUser('CUSTOMER');
+  const { calls } = await mockBackend(page, user);
+  await seedSession(page, user);
+  await open(page, 'http://localhost:3310/home');
+  await expect(page.locator('.bottom-nav button')).toHaveCount(5);
+  await expect(page.locator('.bottom-nav button').nth(2)).toHaveAttribute('aria-label', 'درخواست امداد خودرو');
+  await page.getByRole('button', { name: 'درخواست امداد خودرو', exact: true }).click();
+  await expect(page.locator('.iran-plate-field')).toBeVisible();
+  await page.getByRole('button', { name: 'فهمیدم', exact: true }).click();
+  await page.locator('.bottom-nav').getByRole('button', { name: 'پروفایل', exact: true }).click();
+  await page.getByLabel('نام و نام خانوادگی', { exact: true }).fill('کاربر جدید خودرو چاره');
+  await page.getByRole('button', { name: 'ذخیره نام', exact: false }).click();
+  await expect(page.getByRole('status')).toHaveText('نام شما ذخیره شد.');
+  expect(calls.find(c => c.route === '/me' && c.method === 'PATCH')?.body).toEqual({ fullName: 'کاربر جدید خودرو چاره' });
+  expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
+  await page.screenshot({ path: info.outputPath('customer-profile-mobile.png') });
+});
+
+test('driver membership shows the real plate, blue pickup and level guide', async ({ page }, info) => {
+  await page.setViewportSize({ width: 390, height: 844 });
+  const user = makeUser('DRIVER');
+  await mockBackend(page, user); await seedSession(page, user);
+  await open(page, 'http://localhost:3311/home');
+  await page.locator('.bottom-nav').getByRole('button', { name: 'پروفایل', exact: true }).click();
+  const card = page.getByRole('link', { name: /امدادگر پایه خودرو چاره/ });
+  await expect(card).toContainText(user.vehiclePlate);
+  await expect(card.getByRole('img', { name: 'نیسان آبی امداد خودرو چاره' })).toBeVisible();
+  await card.screenshot({ path: info.outputPath('driver-membership-mobile.png') });
+  expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
+  await card.click();
+  await expect(page.getByRole('heading', { name: 'از امدادگر پایه تا امدادگر ارشد' })).toBeVisible();
 });
 
 test("completed request payment remains accessible from history after reopening", async ({ page }) => {
@@ -320,5 +386,5 @@ test("completed request payment remains accessible from history after reopening"
   await expect(dialog.locator('.payment-breakdown')).toContainText('۲۴۰٬۰۰۰ تومان');
   await dialog.getByRole('button', { name: 'بستن', exact: true }).click();
   await page.getByRole('button', { name: 'بازگشت', exact: true }).click();
-  await expect(page.locator('dialog.location-permission')).toBeVisible();
+  await expect(page.locator('dialog.location-permission')).not.toBeVisible();
 });

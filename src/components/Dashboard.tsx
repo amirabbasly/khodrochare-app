@@ -1,11 +1,16 @@
 "use client";
 
 import Image from "next/image";
-import { AddressSearch, VehicleSearch } from "@/components/SearchFields";
+import { CustomerProfile } from "./CustomerProfile";
+import "./account-polish.css";
+import { IranPlate } from "@/components/IranPlate";
+import { MapAddressPicker } from "@/components/MapAddressPicker";
+import { VehicleSearch } from "@/components/SearchFields";
 import { PaymentDialog } from "@/components/PaymentDialog";
 import { api, logout as backendLogout, errorMessage, requestStatus, type AssistanceRequest, type Vehicle, type Place, type VehicleModel, type PricingBreakdown } from "@/lib/api";
 import { useAuthenticatedUser, useLiveRequest } from "@/lib/use-backend";
 import { useCallback, useEffect, useState, type FormEvent, type ReactNode } from "react";
+import { LocationTelemetry } from "@/components/LocationTelemetry";
 import { LocationPermissionModal } from "@/components/LocationPermissionModal";
 import { useRouter } from "next/navigation";
 import { BrandLogo, Icon } from "@/components/Icons";
@@ -394,17 +399,6 @@ function HallView({ onBack, onToast }: { onBack: () => void; onToast: (message: 
   </div>;
 }
 
-function ProfileView({ name, username, phone, onSave, onBack, onToast }: { name: string; username: string; phone: string; onSave: (name: string, phone: string) => void; onBack: () => void; onToast: (message: string) => void }) {
-  const [fullName, setFullName] = useState(name);
-  const [phoneNumber, setPhoneNumber] = useState(phone);
-  const [email, setEmail] = useState("");
-  return <div className="subpage"><PageTitle title="حساب کاربری" subtitle="اطلاعات و تنظیمات حساب خودت را مدیریت کن." onBack={onBack} />
-    <div className="profile-layout"><section className="panel-card profile-summary"><div className="profile-cover"><span className="profile-cover-orbit" /></div><Avatar name={name} large /><h2>{name}</h2><p dir="ltr">{username === "admin" ? "@admin" : phone || username}</p><span className="profile-member"><Icon name="shield" size={14} />عضو خودرو چاره</span><div className="profile-stats"><span><b>۰۳</b><small>درخواست</small></span><span><b>۰۱</b><small>خودرو</small></span><span><b>۰۲</b><small>نشان</small></span></div></section>
-      <section className="panel-card profile-edit"><div className="panel-heading"><span className="profile-edit-icon"><Icon name="user" size={20} /></span><div><h2>اطلاعات شخصی</h2><p>اطلاعاتت را به‌روز نگه دار.</p></div></div><form className="profile-form" onSubmit={(event) => { event.preventDefault(); onSave(fullName.trim(), phoneNumber);  }}><label className="form-field"><span className="field-label">نام و نام خانوادگی</span><span className="field-control"><input value={fullName} onChange={(event) => setFullName(event.target.value)} required /></span></label><label className="form-field"><span className="field-label">شمارهٔ تماس</span><span className="field-control field-control--ltr"><input type="tel" autoComplete="tel" value={phoneNumber} onChange={(event) => setPhoneNumber(event.target.value)} dir="ltr" /></span></label><label className="form-field"><span className="field-label">ایمیل (اختیاری)</span><span className="field-control field-control--ltr"><input type="email" placeholder="name@example.com" value={email} onChange={(event) => setEmail(event.target.value)} dir="ltr" /></span></label><button className="primary-button" type="submit">ذخیرهٔ تغییرات <Icon name="arrow-left" size={16} /></button></form></section></div>
-    <section className="panel-card settings-list"><button type="button" onClick={() => onToast("تنظیمات امنیتی در نسخهٔ کامل فعال می‌شود")}><span className="settings-icon"><Icon name="shield" size={18} /></span><span><strong>امنیت و حریم خصوصی</strong><small>رمز عبور و تنظیمات ورود</small></span><Icon name="chevron" size={17} /></button><button type="button" onClick={() => onToast("تنظیمات اعلان‌ها باز شد")}><span className="settings-icon"><Icon name="bell" size={18} /></span><span><strong>تنظیمات اعلان‌ها</strong><small>مدیریت پیام‌ها و یادآورها</small></span><Icon name="chevron" size={17} /></button></section>
-  </div>;
-}
-
 function MyCarsView({ onBack, onToast }: { onBack: () => void; onToast: (message: string) => void }) {
   const [cars, setCars] = useState<Vehicle[]>([]);
   const [adding, setAdding] = useState(false);
@@ -426,7 +420,7 @@ function MyCarsView({ onBack, onToast }: { onBack: () => void; onToast: (message
     finally { setBusy(false); }
   }
   return <div className="subpage"><PageTitle title="خودروهای من" subtitle="خودروهایت را اضافه کن تا خدمات دقیق‌تری بگیری." onBack={onBack} action={<button className="primary-button compact-button" type="button" onClick={() => setAdding((current) => !current)}><Icon name="plus" size={16} /> افزودن خودرو</button>} />
-    {adding && <form className="add-inline-form" onSubmit={addCar}><input autoFocus placeholder="مثلاً تارا اتوماتیک · ۱۴۰۲" value={newCar} onChange={(event) => setNewCar(event.target.value)} required /><input placeholder="پلاک خودرو" value={plate} onChange={event => setPlate(event.target.value)} minLength={4} maxLength={30} required /><button className="primary-button compact-button" type="submit" disabled={busy}>ثبت خودرو</button></form>}
+    {adding && <form className="add-inline-form" onSubmit={addCar}><input autoFocus placeholder="مثلاً تارا اتوماتیک · ۱۴۰۲" value={newCar} onChange={(event) => setNewCar(event.target.value)} required /><IranPlate value={plate} onChange={setPlate} /><button className="primary-button compact-button" type="submit" disabled={busy}>ثبت خودرو</button></form>}
     <div className="my-cars-grid">{cars.map((car, index) => <article className="my-car-card" key={`${car}-${index}`}><div className={`my-car-visual ${index % 2 ? "my-car-visual--blue" : ""}`}><span className="car-plate">{car.plate}</span><MiniCar variant={index % 2 ? "blue" : "silver"} /></div><div className="my-car-info"><span className="car-primary-label">خودروی اصلی{index === 0 ? "" : ""}</span><h2>{car.name}</h2><div className="my-car-meta"><span><Icon name="shield" size={14} />بیمهٔ شخص ثالث: ۱۲۰ روز</span><span><Icon name="clock" size={14} />سرویس بعدی: ۴۵ روز</span></div><div className="my-car-actions"><button type="button" className="car-action-main" onClick={() => onToast(`خودروی ${car.name} انتخاب شد`)}>انتخاب خودرو <Icon name="arrow-left" size={15} /></button><button type="button" className="icon-outline-button" onClick={() => onToast("ویرایش خودرو در نسخهٔ کامل فعال می‌شود")} aria-label="ویرایش"><Icon name="edit" size={17} /></button></div></div></article>)}</div>
     <button type="button" className="add-car-dashed" onClick={() => setAdding(true)}><span><Icon name="plus" size={22} /></span><strong>خودروی دیگری اضافه کن</strong><small>با اضافه کردن خودرو، پیشنهادهای بهتری بگیر.</small></button>
   </div>;
@@ -566,7 +560,7 @@ function ServiceView({
           <div className="service-request-grid">
             <div className="request-fields">
               {service.id === "transport" ? <VehicleSearch value={car} modelId={modelId} onChange={value => { setCar(value); setModelId(null); }} onSelect={(model: VehicleModel) => { setCar(model.name); setModelId(model.id); }} /> : <label className="form-field"><span className="field-label">خودروی شما</span><span className="field-control"><input value={car} onChange={event => setCar(event.target.value)} placeholder="نام خودرو" minLength={2} maxLength={100} required /></span></label>}
-              <label className="form-field"><span className="field-label">پلاک خودرو</span><span className="field-control"><input value={plate} onChange={event => setPlate(event.target.value)} placeholder="۱۲ ب ۳۴۵ - ۶۷" minLength={4} maxLength={30} required /></span></label>
+              <IranPlate value={plate} onChange={setPlate} />
               {service.id === "transport" && <>
                 <label className="form-field"><span className="field-label">نوع حمل خودرو</span><span className="field-control"><select value={transportKind} onChange={event => setTransportKind(event.target.value)}><option value="NISSAN">نیسان جرثقیل</option><option value="FLATBED">کفی خودروبر</option></select></span></label>
                 <label className="check-label"><input type="checkbox" checked={heavyTraffic} onChange={event => setHeavyTraffic(event.target.checked)} /><span>ترافیک سنگین (۲۰٪ اضافه)</span></label>
@@ -588,11 +582,11 @@ function ServiceView({
                   <span className="map-frame-badge"><Icon name="pin" size={15} /></span>
                   <div className="map-frame-titles">
                     <strong>موقعیت دریافت خدمت</strong>
-                    <small>{service.id === "transport" ? "نام شهر و خیابان را جست‌وجو و انتخاب کنید" : "روی نقشه بزنید یا موقعیت خود را پیدا کنید"}</small>
+                    <small>{service.id === "transport" ? "مبدأ را روی نقشه انتخاب کنید؛ استان و خیابان خودکار پیدا می‌شوند" : "روی نقشه بزنید یا موقعیت خود را پیدا کنید"}</small>
                   </div>
                   <span className="map-frame-tag"><Icon name="clock" size={12} /> امداد سریع</span>
                 </div>
-                {service.id === "transport" ? <AddressSearch label="مبدأ حمل (شهر و خیابان)" value={originPlace} onSelect={setOriginPlace} /> : <LocationPickerMap onPick={pickOrigin} onToast={onToast} />}
+                {service.id === "transport" ? <MapAddressPicker label="مبدأ حمل" onSelect={setOriginPlace} /> : <LocationPickerMap onPick={pickOrigin} onToast={onToast} />}
                 <div className="map-frame-foot">
                   <span><Icon name="shield" size={12} /> موقعیت شما فقط برای اعزام امدادگر استفاده می‌شود</span>
                   <span><Icon name="clock" size={12} /> حداکثر ۱۵ دقیقه تا رسیدن</span>
@@ -600,7 +594,7 @@ function ServiceView({
               </div>
             </div>
           </div>
-          {service.id === "transport" && <div className="request-map"><div className="map-frame"><div className="map-frame-head"><span className="map-frame-badge"><Icon name="pin" size={15} /></span><div className="map-frame-titles"><strong>مقصد حمل خودرو</strong><small>نام شهر و خیابان مقصد را جست‌وجو کنید</small></div></div><AddressSearch label="مقصد حمل (شهر و خیابان)" value={destinationPlace} onSelect={setDestinationPlace} /></div></div>}
+          {service.id === "transport" && <div className="request-map"><div className="map-frame"><div className="map-frame-head"><span className="map-frame-badge"><Icon name="pin" size={15} /></span><div className="map-frame-titles"><strong>مقصد حمل خودرو</strong><small>مقصد را روی نقشه انتخاب کنید</small></div></div><MapAddressPicker label="مقصد حمل" onSelect={setDestinationPlace} /></div></div>}
           {service.id === "transport" && estimateKey && <p className="form-notice" role="status">{currentEstimate?.error || (currentEstimate?.value ? `مسافت ${(currentEstimate.value.distanceMeters / 1000).toLocaleString("fa-IR", { maximumFractionDigits: 1 })} کیلومتر · مبلغ ${currentEstimate.value.priceToman === null ? "توافقی" : `${currentEstimate.value.priceToman.toLocaleString("fa-IR")} تومان`}` : "در حال محاسبه مبلغ بر اساس مدل خودرو…")}</p>}
           <button className="primary-button request-submit" type="submit" disabled={busy} aria-busy={busy}>ثبت درخواست خدمت <Icon name="arrow-left" size={17} /></button>
         </form>
@@ -729,7 +723,7 @@ function AIChat({ open, setOpen }: { open: boolean; setOpen: (open: boolean) => 
 export default function Dashboard() {
   const router = useRouter();
   const [view, setView] = useState<View>("home");
-  const [homeVisit, setHomeVisit] = useState(0);
+  
   const [selectedService, setSelectedService] = useState<Service>(services[0]);
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [chatOpen, setChatOpen] = useState(false);
@@ -740,8 +734,8 @@ export default function Dashboard() {
 
   const user = useAuthenticatedUser();
   const userName = user?.fullName || "کاربر خودرو چاره";
-  const username = user?.phone || "";
-  const userPhone = user?.phone || "";
+
+
   useEffect(() => {
     let cancelled = false;
     api<AssistanceRequest[]>("/requests").then(rows => {
@@ -762,7 +756,7 @@ export default function Dashboard() {
   }
 
   function navigate(next: View) {
-    if (next === "home") setHomeVisit(value => value + 1);
+
     setView(next);
     setDrawerOpen(false);
     setToast("");
@@ -776,7 +770,7 @@ export default function Dashboard() {
 
   function addBalance() { notify("پرداخت و کیف پول هنوز در سرور فعال نشده است."); }
 
-  function saveProfile() { notify("ویرایش اطلاعات حساب هنوز در سرور فعال نیست."); }
+
   async function logout() {
     try { await backendLogout(); } catch (error) { notify(errorMessage(error)); }
     finally { router.replace("/"); }
@@ -796,7 +790,7 @@ export default function Dashboard() {
     case "history": content = <HistoryView onBack={() => navigate("home")} onOpen={server => { const service = services.find(item => item.id === (server.service === "TOWING" ? "transport" : "roadside"))!; setRequest({ service, car: server.vehicleName, problem: server.problem || "", lat: server.originLat, lng: server.originLng, server }); navigate("waiting"); }} />; break;
     case "market": content = <MarketView onBack={() => navigate("home")} onToast={notify} />; break;
     case "hall": content = <HallView onBack={() => navigate("home")} onToast={notify} />; break;
-    case "profile": content = <ProfileView name={userName} username={username} phone={userPhone} onSave={saveProfile} onBack={() => navigate("home")} onToast={notify} />; break;
+    case "profile": content = <CustomerProfile onBack={() => navigate("home")} />; break;
     case "mycars": content = <MyCarsView onBack={() => navigate("home")} onToast={notify} />; break;
     case "addresses": content = <AddressesView onBack={() => navigate("home")} onToast={notify} />; break;
     case "invite": content = <InviteView onBack={() => navigate("home")} onToast={notify} />; break;
@@ -811,7 +805,7 @@ export default function Dashboard() {
 
   return (
     <div className="app-frame" dir="rtl">
-      {user && <LocationPermissionModal key={homeVisit} />}
+      {user && <><LocationPermissionModal /><LocationTelemetry /></>}
       <header className="app-header">
         <div className="app-header-inner">
           <div className="header-menu-wrap"><button className={`menu-button${drawerOpen ? " menu-button--active" : ""}`} type="button" onClick={() => setDrawerOpen(true)} aria-label="باز کردن منو"><span /><span /><span /></button><span className="menu-word">منو</span></div>
@@ -822,7 +816,7 @@ export default function Dashboard() {
 
       <main className={`app-main${view === "home" ? " app-main--home" : ""}`} key={view}>{content}</main>
 
-      <nav className="bottom-nav" aria-label="ناوبری اصلی">{bottomItems.map((item) => <button className={`bottom-nav-item${view === item.view || (item.view === "market" && view === "market") || (item.view === "hall" && view === "hall") || (item.view === "profile" && view === "profile") ? " is-active" : ""}`} key={item.view} type="button" onClick={() => navigate(item.view)} aria-current={view === item.view ? "page" : undefined}><span className="bottom-nav-icon"><Icon name={item.icon} size={21} /></span><span>{item.label}</span></button>)}</nav>
+      <nav className="bottom-nav" aria-label="ناوبری اصلی">{bottomItems.flatMap((item, index) => [index === 2 ? <button key="roadside" className="bottom-nav-item bottom-nav-rescue" type="button" onClick={() => openService(services[0])} aria-label="درخواست امداد خودرو"><span className="bottom-nav-icon"><Icon name="car" size={25} /></span><span>امداد خودرو</span></button> : null, <button className={`bottom-nav-item${view === item.view || (item.view === "market" && view === "market") || (item.view === "hall" && view === "hall") || (item.view === "profile" && view === "profile") ? " is-active" : ""}`} key={item.view} type="button" onClick={() => navigate(item.view)} aria-current={view === item.view ? "page" : undefined}><span className="bottom-nav-icon"><Icon name={item.icon} size={21} /></span><span>{item.label}</span></button>])}</nav>
 
       <div className={`drawer-backdrop${drawerOpen ? " is-visible" : ""}`} onClick={() => setDrawerOpen(false)} aria-hidden="true" />
       <aside className={`app-drawer${drawerOpen ? " is-open" : ""}`} aria-label="منوی اصلی" aria-hidden={!drawerOpen}>

@@ -31,7 +31,9 @@ function rescuerPin(L: LeafletModule) {
 export function LocationPickerMap({
   onPick,
   onToast,
+  hideCoordinates = false,
 }: {
+  hideCoordinates?: boolean;
   onPick?: (lat: number, lng: number) => void;
   onToast?: (message: string) => void;
 }) {
@@ -133,9 +135,9 @@ export function LocationPickerMap({
       <button className="map-locate-btn" type="button" onClick={locateMe} disabled={locating}>
         <Icon name="pin" size={15} /> {locating ? "در حال یافتن موقعیت..." : "موقعیت منو پیدا کن"}
       </button>
-      <span className="map-coords-chip" dir="ltr">
+      {!hideCoordinates && <span className="map-coords-chip" dir="ltr">
         {coords ? `${coords.lat.toFixed(5)}, ${coords.lng.toFixed(5)}` : "برای انتخاب، روی نقشه بزنید"}
-      </span>
+      </span>}
     </div>
   );
 }
