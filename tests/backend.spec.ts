@@ -4,7 +4,7 @@ const endpoint = "https://api.khodrochare.ir/api/v1";
 const makeUser = (role: "CUSTOMER" | "DRIVER") => ({ id: `${role}-user`, role, fullName: role === "CUSTOMER" ? "کاربر آزمایشی" : "امدادگر آزمایشی", phone: "09121234567", nationalId: "1234567891", services: ["REPAIR", "TOWING"], vehicleType: "نیسان", vehiclePlate: "12 ب 345 - 67", identityDocumentId: role === "DRIVER" ? "document-id" : null, vehicles: [] });
 type TestPayment = { id: string; status: string; cardNumber: string; accountName: string; serviceToman: number; partsToman: number; amountToman: number; commissionPercent: number; commissionToman: number; driverShareToman: number; attempts: { bankReference: string; status: string }[] };
 type TestUser = ReturnType<typeof makeUser>;
-type TestRequest = { operationsStartedAt?: string | null; payment?: { status: string } | null; id: string; status: string; service: string; customerId: string; driverId: string | null; vehicleName: string; vehiclePlate: string; originLat: number; originLng: number; destinationLat: number | null; destinationLng: number | null; distanceMeters: number | null; priceToman: number | null; originAddress?: string; destinationAddress?: string; partsQuoteToman?: number | null; partsApprovedToman?: number | null; partsQuoteVersion?: number; problem: string | null; createdAt: string; updatedAt: string };
+type TestRequest = { driverCommissionConfirmedAt?: string | null; operationsStartedAt?: string | null; payment?: { status: string } | null; id: string; status: string; service: string; customerId: string; driverId: string | null; vehicleName: string; vehiclePlate: string; originLat: number; originLng: number; destinationLat: number | null; destinationLng: number | null; distanceMeters: number | null; priceToman: number | null; originAddress?: string; destinationAddress?: string; partsQuoteToman?: number | null; partsApprovedToman?: number | null; partsQuoteVersion?: number; problem: string | null; createdAt: string; updatedAt: string };
 function makeRequest(): TestRequest {
   return { id: "request-1", status: "PENDING", service: "REPAIR", customerId: "CUSTOMER-user", driverId: null, vehicleName: "پژو ۲۰۶", vehiclePlate: "12 ب 345 - 67", originLat: 35.7, originLng: 51.4, destinationLat: null, destinationLng: null, distanceMeters: null, priceToman: 800000, problem: "خودرو روشن نمی‌شود", createdAt: new Date().toISOString(), updatedAt: new Date().toISOString() };
 }
@@ -26,6 +26,7 @@ async function mockBackend(page: Page, user: TestUser, seed: TestRequest[] = [])
     if (suffix === "/me") { if (method === 'PATCH') user.fullName = String(body!.fullName); return send(user); }
     if (suffix === '/me/location') return route.fulfill({ status: 204 });
     if (suffix === '/locations/reverse') { const latitude = Number(body!.latitude), longitude = Number(body!.longitude); return send({ id: (longitude < 51.38 ? 'b' : 'a').repeat(64), label: longitude < 51.38 ? 'تهران، خیابان آزادی' : 'تهران، خیابان ولیعصر', province: 'تهران', city: 'تهران', street: longitude < 51.38 ? 'خیابان آزادی' : 'خیابان ولیعصر', latitude, longitude }); }
+    if (suffix.endsWith('/commission-confirm')) { state.requests[0].driverCommissionConfirmedAt = new Date().toISOString(); return send(state.requests[0]); }
     if (suffix.endsWith('/operations/start')) { state.requests[0].operationsStartedAt = new Date().toISOString(); return send(state.requests[0]); }
     if (suffix === "/drivers/earnings") return send({ entries: [], totalToman: 0 });
     if (suffix === "/vehicle-models") return send([{ id: "vm_test206", name: "پژو ۲۰۶", groupId: "GROUP_1", group: { id: "GROUP_1", title: "گروه اول", nissanBaseToman: 1600000, nissanPerKmToman: 60000, flatbedBaseToman: 2000000, flatbedPerKmToman: 75000 } }]);
@@ -331,7 +332,10 @@ test("driver can send an inspected parts quote for customer approval", async ({ 
   await page.getByRole('button', { name: 'انجام عملیات', exact: true }).click();
   await expect.poll(() => state.requests[0].operationsStartedAt).toBeTruthy();
   await expect(page.getByRole('button', { name: 'انجام و پرداخت شد', exact: true })).toBeDisabled();
-  state.requests[0].payment = { status: 'VERIFIED' };
+  await page.getByRole('checkbox', { name: 'کمیسیون به من پرداخت کرد', exact: true }).check();
+  await expect.poll(() => state.requests[0].driverCommissionConfirmedAt).toBeTruthy();
+  expect(calls.find(call => call.route.endsWith('/commission-confirm'))?.body).toEqual({ confirmed: true });
+  expect(state.requests[0].payment?.status).not.toBe('VERIFIED');
   await expect(page.getByRole('button', { name: 'انجام و پرداخت شد', exact: true })).toBeEnabled({ timeout: 12000 });
   await page.getByRole('button', { name: 'انجام و پرداخت شد', exact: true }).click();
   await expect.poll(() => state.requests[0].status).toBe('COMPLETED');
