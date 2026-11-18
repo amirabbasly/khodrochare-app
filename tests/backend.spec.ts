@@ -2,7 +2,7 @@ import { test, expect, type Page } from "@playwright/test";
 
 const endpoint = "https://api.khodrochare.ir/api/v1";
 const makeUser = (role: "CUSTOMER" | "DRIVER") => ({ id: `${role}-user`, role, fullName: role === "CUSTOMER" ? "کاربر آزمایشی" : "امدادگر آزمایشی", phone: "09121234567", nationalId: "1234567891", services: ["REPAIR", "TOWING"], vehicleType: "نیسان", vehiclePlate: "12 ب 345 - 67", identityDocumentId: role === "DRIVER" ? "document-id" : null, vehicles: [] });
-type TestPayment = { id: string; status: string; cardNumber: string; accountName: string; serviceToman: number; partsToman: number; amountToman: number; commissionPercent: number; commissionToman: number; driverShareToman: number; attempts: { bankReference: string; status: string }[] };
+type TestPayment = { id: string; status: string; serviceToman: number; partsToman: number; amountToman: number; commissionPercent: number; commissionToman: number; driverShareToman: number; attempts: { bankReference: string; status: string }[] };
 type TestUser = ReturnType<typeof makeUser>;
 type TestRequest = { driverCommissionConfirmedAt?: string | null; operationsStartedAt?: string | null; payment?: { status: string } | null; id: string; status: string; service: string; customerId: string; driverId: string | null; vehicleName: string; vehiclePlate: string; originLat: number; originLng: number; destinationLat: number | null; destinationLng: number | null; distanceMeters: number | null; priceToman: number | null; originAddress?: string; destinationAddress?: string; partsQuoteToman?: number | null; partsApprovedToman?: number | null; partsQuoteVersion?: number; problem: string | null; createdAt: string; updatedAt: string };
 function makeRequest(): TestRequest {
@@ -37,14 +37,15 @@ async function mockBackend(page: Page, user: TestUser, seed: TestRequest[] = [])
     if (suffix === "/requests/towing/estimate") return send({ priceToman: 2200000, distanceMeters: 10000, pricingBreakdown: { service: "TOWING", baseToman: 1600000, perKmToman: 60000, totalToman: 2200000, requiresAgreement: false } });
     if (suffix.endsWith("/parts-quote/approve")) { state.requests[0].partsApprovedToman = state.requests[0].partsQuoteToman; return send(state.requests[0]); }
     if (suffix.endsWith("/parts-quote")) { state.requests[0].partsQuoteToman = Number(body!.amountToman); state.requests[0].partsQuoteVersion = 1; state.requests[0].partsApprovedToman = null; return send(state.requests[0]); }
-    if (suffix.endsWith("/payment/report")) { state.payment!.status = "SUBMITTED"; state.payment!.attempts = [{ bankReference: String(body!.bankReference), status: "SUBMITTED" }]; return send(state.payment); }
+    if (suffix === "/wallet") return send({balanceToman:0,sandboxBalanceToman:0,mode:"sandbox",entries:[]});
+    if (suffix.endsWith("/payment/checkout")||suffix === "/wallet/topups") return send({id:"checkout-test",mode:"sandbox",url:"https://sandbox.zarinpal.com/pg/StartPay/"+"S"+"1".repeat(35)});
     if (suffix.endsWith("/payment")) {
       if (method === "GET") return send(state.payment);
       const request = state.requests[0];
       if (request.service === "REPAIR" && request.partsApprovedToman == null) return send({ error: "Parts quote must be approved before payment" }, 409);
       const serviceToman = request.priceToman || 0; const partsToman = request.partsApprovedToman || 0;
       const amountToman = serviceToman + partsToman; const commissionPercent = request.service === "REPAIR" ? 30 : 20;
-      state.payment = { id: "payment-1", status: "AWAITING_TRANSFER", cardNumber: "6219861435789192", accountName: "حساب خودرو چاره", serviceToman, partsToman, amountToman, commissionPercent, commissionToman: amountToman * commissionPercent / 100, driverShareToman: amountToman * (100 - commissionPercent) / 100, attempts: [] };
+      state.payment = { id: "payment-1", status: "AWAITING_PAYMENT", serviceToman, partsToman, amountToman, commissionPercent, commissionToman: amountToman * commissionPercent / 100, driverShareToman: amountToman * (100 - commissionPercent) / 100, attempts: [] };
       return send(state.payment, 201);
     }
     if (suffix === "/documents") return send({ id: "c9a7152f-41d8-4fc5-a69c-6ae71152d474", token: "b".repeat(64), expiresInSeconds: 86400 }, 201);
@@ -285,7 +286,7 @@ test("driver service choices and complete Iran flag fit on mobile", async ({ pag
   await page.locator(".service-picker").screenshot({ path: info.outputPath("driver-services-mobile.png") });
 });
 
-test("repair payment includes approved parts and reports a transfer without marking it paid", async ({ page }, info) => {
+test("repair payment includes approved parts and opens the Zarinpal sandbox without marking it paid", async ({ page }, info) => {
   await page.setViewportSize({ width: 390, height: 844 });
   const user = makeUser('CUSTOMER');
   const request = { ...makeRequest(), status: 'ARRIVED', driverId: 'DRIVER-user', partsQuoteToman: 200000, partsQuoteVersion: 1, partsApprovedToman: null };
@@ -295,21 +296,19 @@ test("repair payment includes approved parts and reports a transfer without mark
   await page.getByRole('button', { name: 'تأیید هزینه قطعات', exact: true }).click();
   await expect.poll(() => state.requests[0].partsApprovedToman).toBe(200000);
   await page.locator('.pay-button').click();
-  const dialog = page.getByRole('dialog', { name: 'پرداخت کارت‌به‌کارت' });
+  const dialog = page.getByRole('dialog', { name: 'پرداخت آنلاین خدمات' });
   await expect(dialog).toBeVisible();
-  await expect(dialog.locator('.bank-card-number')).toHaveText('6219 8614 3578 9192');
-  await expect(dialog.getByText('حساب خودرو چاره', { exact: true })).toBeVisible();
+  await expect(dialog.getByText('شماره کارت', {exact:true})).toHaveCount(0);
   await expect(dialog.locator('.payment-breakdown')).toContainText('۱٬۰۰۰٬۰۰۰ تومان');
   await expect(dialog.locator('.payment-breakdown')).toContainText('۳۰۰٬۰۰۰ تومان');
   await expect(dialog.locator('.payment-breakdown')).toContainText('۷۰۰٬۰۰۰ تومان');
   expect(await dialog.evaluate(element => element.scrollWidth <= element.clientWidth)).toBe(true);
   await dialog.screenshot({ path: info.outputPath('payment-mobile.png') });
-  await dialog.getByLabel('شماره پیگیری واریز').fill('123456789012');
-  await dialog.getByLabel('زمان واریز').fill('2026-10-20T14:30');
-  await dialog.getByRole('button', { name: 'ثبت اطلاعات واریز', exact: true }).click();
-  await expect(dialog.getByText('واریز اعلام شده؛ در انتظار بررسی', { exact: true })).toBeVisible();
-  expect(state.payment?.status).toBe('SUBMITTED');
-  expect(calls.find(c => c.route.endsWith('/payment/report'))?.body).toMatchObject({ bankReference: '123456789012' });
+  await page.route('https://sandbox.zarinpal.com/**', route=>route.fulfill({contentType:'text/html',body:'<h1>Zarinpal Sandbox</h1>'}));
+  await dialog.getByRole('button', {name:'پرداخت با زرین‌پال',exact:true}).click();
+  await expect(page).toHaveURL(/https:\/\/sandbox\.zarinpal\.com\/pg\/StartPay\/S/);
+  expect(calls.find(c=>c.route.endsWith('/payment/checkout'))?.body).toHaveProperty('idempotencyKey');
+  expect(state.payment?.status).toBe('AWAITING_PAYMENT');
 });
 
 test("driver can send an inspected parts quote for customer approval", async ({ page }) => {
@@ -385,10 +384,20 @@ test("completed request payment remains accessible from history after reopening"
   await page.locator('.drawer-nav button').filter({ hasText: 'تاریخچه' }).click();
   await page.getByRole('button', { name: 'گزینه‌ها', exact: true }).click();
   await page.locator('.pay-button').click();
-  const dialog = page.getByRole('dialog', { name: 'پرداخت کارت‌به‌کارت' });
+  const dialog = page.getByRole('dialog', { name: 'پرداخت آنلاین خدمات' });
   await expect(dialog.locator('.payment-breakdown')).toContainText('۸۰۰٬۰۰۰ تومان');
   await expect(dialog.locator('.payment-breakdown')).toContainText('۲۴۰٬۰۰۰ تومان');
   await dialog.getByRole('button', { name: 'بستن', exact: true }).click();
   await page.getByRole('button', { name: 'بازگشت', exact: true }).click();
   await expect(page.locator('dialog.location-permission')).not.toBeVisible();
+});
+
+
+for(const role of ["CUSTOMER","DRIVER"] as const)test(`${role} wallet opens sandbox with the entered amount`,async({page})=>{
+ const user=makeUser(role);const{calls}=await mockBackend(page,user);await seedSession(page,user);await open(page,role==='CUSTOMER'?'http://localhost:3310/home':'http://localhost:3311/home');
+ await page.getByRole('button',{name:'باز کردن منو',exact:true}).click();await page.locator('.drawer-nav button').filter({hasText:'کیف پول'}).click();
+ await expect(page.getByText('موجودی واقعی',{exact:true})).toBeVisible();await page.getByPlaceholder('مثلاً ۵۰۰٬۰۰۰').fill('۵۰٬۰۰۰');
+ await page.route('https://sandbox.zarinpal.com/**',r=>r.fulfill({contentType:'text/html',body:'<h1>Zarinpal Sandbox</h1>'}));
+ await page.getByRole('button',{name:'ورود به درگاه آزمایشی زرین‌پال',exact:true}).click();await expect(page).toHaveURL(/sandbox\.zarinpal\.com\/pg\/StartPay/);
+ expect(calls.find(c=>c.route==='/wallet/topups')?.body).toMatchObject({amountToman:50000});
 });

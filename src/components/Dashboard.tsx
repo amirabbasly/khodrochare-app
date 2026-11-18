@@ -1,6 +1,9 @@
 "use client";
+import {WalletPanel} from "./WalletPanel";
+import {useWallet} from "@/lib/use-wallet";
 
 import Image from "next/image";
+import { MarketStore } from "./MarketStore";
 import { CustomerProfile } from "./CustomerProfile";
 import "./account-polish.css";
 import { IranPlate } from "@/components/IranPlate";
@@ -129,13 +132,9 @@ const bottomItems: { label: string; view: View; icon: "home" | "market" | "aucti
   { label: "پروفایل", view: "profile", icon: "user" },
 ];
 
-function latinDigits(value: string) {
-  return value.replace(/[۰-۹]/g, (digit) => String("۰۱۲۳۴۵۶۷۸۹".indexOf(digit))).replace(/[٬،,\s]/g, "");
-}
 
-function formatMoney(value: number) {
-  return `${Math.max(0, value).toLocaleString("fa-IR")} تومان`;
-}
+
+
 
 function PageTitle({ title, subtitle, onBack, action }: { title: string; subtitle?: string; onBack: () => void; action?: ReactNode }) {
   return (
@@ -337,24 +336,6 @@ function HomeView({
   );
 }
 
-function WalletView({ balance, onAdd, onBack }: { balance: number; onAdd: (amount: number) => void; onBack: () => void }) {
-  const [amount, setAmount] = useState("");
-  function submit(event: FormEvent<HTMLFormElement>) {
-    event.preventDefault();
-    const parsed = Number(latinDigits(amount));
-    if (parsed < 10000) return;
-    onAdd(parsed);
-    setAmount("");
-  }
-  return <div className="subpage"><PageTitle title="کیف پول" subtitle="پرداخت سریع‌تر و بی‌دردسرتر خدمات خودرو" onBack={onBack} />
-    <div className="wallet-layout">
-      <section className="wallet-card"><div className="wallet-card-top"><span className="wallet-emblem"><Icon name="wallet" size={23} /></span><span className="wallet-secure"><Icon name="shield" size={14} /> کیف پول امن خودرو چاره</span></div><span className="wallet-label">موجودی قابل استفاده</span><strong className="wallet-balance">{formatMoney(balance)}</strong><span className="wallet-card-foot">موجودی شما همیشه در دسترس است.</span><div className="wallet-card-orbit" /></section>
-      <section className="panel-card topup-card"><span className="panel-eyebrow">افزایش موجودی</span><h2>کیف پولت را شارژ کن</h2><p>مبلغ دلخواهت را وارد کن و ادامه بده.</p><form className="topup-form" onSubmit={submit}><label className="form-field"><span className="field-label">مبلغ شارژ (تومان)</span><span className="field-control"><input type="text" inputMode="numeric" value={amount} onChange={(event) => setAmount(event.target.value)} placeholder="مثلاً ۵۰۰٬۰۰۰" required dir="rtl" /></span></label><button type="submit" className="primary-button">ادامه به پرداخت <Icon name="arrow-left" size={17} /></button></form></section>
-    </div>
-    <section className="panel-card list-panel"><SectionTitle title="تراکنش‌های اخیر" caption="آخرین تغییرات کیف پول شما" /><div className="transaction-row"><span className="transaction-icon transaction-icon--green"><Icon name="plus" size={18} /></span><span className="transaction-info"><strong>شارژ کیف پول</strong><small>امروز · ۱۰:۴۲</small></span><b className="money-positive">+ ۵۰۰٬۰۰۰ تومان</b></div><div className="transaction-row"><span className="transaction-icon"><Icon name="car" size={18} /></span><span className="transaction-info"><strong>سرویس دوره‌ای خودرو</strong><small>۲۴ مهر · ۱۶:۲۰</small></span><b>− ۸۵۰٬۰۰۰ تومان</b></div></section>
-  </div>;
-}
-
 function HistoryView({ onBack, onOpen }: { onBack: () => void; onOpen: (request: AssistanceRequest) => void }) {
   const [filter, setFilter] = useState("همه");
   const [requests, setRequests] = useState<AssistanceRequest[]>([]);
@@ -368,22 +349,7 @@ function HistoryView({ onBack, onOpen }: { onBack: () => void; onOpen: (request:
   return <div className="subpage"><PageTitle title="تاریخچهٔ درخواست‌ها" subtitle="همهٔ سرویس‌ها و پیگیری‌های تو اینجاست." onBack={onBack} /><div className="filter-tabs">{["همه", "در انتظار", "انجام‌شده"].map((item) => <button type="button" key={item} className={filter === item ? "is-active" : ""} onClick={() => setFilter(item)}>{item}</button>)}</div><section className="panel-card history-list">{filteredRows.map((row) => <article className="history-row" key={row.id}><ServiceIllustration type={row.icon} size="sm" /><div className="history-details"><span>{row.kind}</span><strong>{row.title}</strong><small><Icon name="calendar" size={13} />{row.date}</small></div><span className={`status-pill${row.status === "انجام‌شده" ? " status-pill--done" : ""}`}><i />{row.status}</span><button className="row-more" type="button" aria-label="گزینه‌ها" disabled={row.status === "لغوشده"} onClick={() => { const request = requests.find(item => item.id === row.id); if (request) onOpen(request); }}><Icon name="more" size={20} /></button></article>)}</section><div className="history-note"><Icon name="sparkles" size={18} /><span>با ثبت درخواست جدید، جزئیات آن همین‌جا نمایش داده می‌شود.</span></div></div>;
 }
 
-function MarketView({ onBack, onToast }: { onBack: () => void; onToast: (message: string) => void }) {
-  const [category, setCategory] = useState("همهٔ قطعات");
-  const categories = ["همهٔ قطعات", "لوازم مصرفی", "قطعات فنی", "تجهیزات جانبی"];
-  const products = [
-    { name: "روغن موتور 5W-30", detail: "مناسب خودروهای داخلی · ۴ لیتر", price: "۱٬۸۹۰٬۰۰۰", badge: "تخفیف ۲۰٪", tone: "oil" },
-    { name: "باتری ۶۰ آمپر", detail: "۱۸ ماه ضمانت تعویض", price: "۳٬۷۵۰٬۰۰۰", badge: "پرفروش", tone: "battery" },
-    { name: "لاستیک چهارفصل", detail: "سایز ۱۸۵/۶۵ · جفت", price: "۵٬۴۰۰٬۰۰۰", badge: "ارسال رایگان", tone: "tire" },
-  ];
-  return <div className="subpage"><PageTitle title="جمعه‌بازار لوازم یدکی" subtitle="بازار قطعات مطمئن، با قیمت‌های به‌صرفه." onBack={onBack} action={<button className="icon-outline-button" type="button" onClick={() => onToast("فهرست علاقه‌مندی‌ها باز شد") } aria-label="علاقه‌مندی‌ها"><Icon name="gift" size={18} /></button>} />
-    <section className="market-hero"><span className="market-hero-label"><Icon name="tag" size={15} /> هر جمعه، یک فرصت تازه</span><h2>قطعهٔ خوب پیدا کن،<br /><em>هوشمندانه خرید کن.</em></h2><p>فروشنده‌های تأییدشده، پیشنهادهای ویژه و خرید با خیال راحت.</p><button type="button" onClick={() => onToast("به‌زودی جمعه‌بازار کامل‌تر می‌شود")}>دیدن پیشنهادهای ویژه <Icon name="arrow-left" size={16} /></button><div className="market-wheel"><span /><i /></div></section>
-    <div className="market-toolbar"><div className="search-field"><Icon name="search" size={19} /><input placeholder="دنبال چه قطعه‌ای می‌گردی؟" aria-label="جست‌وجوی قطعه" /></div><button className="filter-button" type="button" onClick={() => onToast("فیلترهای بیشتر به‌زودی اضافه می‌شوند")}><Icon name="filter" size={17} /> فیلترها</button></div>
-    <div className="category-tabs">{categories.map((item) => <button key={item} type="button" className={category === item ? "is-active" : ""} onClick={() => setCategory(item)}>{item}</button>)}</div>
-    <SectionTitle title="پیشنهادهای جمعه" caption="محصول‌های منتخب فروشندگان خودرو چاره" action={<button className="text-link" type="button" onClick={() => onToast("همهٔ محصولات در نسخهٔ کامل نمایش داده می‌شوند")}>مشاهده همه <Icon name="arrow-left" size={14} /></button>} />
-    <div className="product-grid">{products.map((product) => <article className="product-card" key={product.name}><div className={`product-visual product-visual--${product.tone}`}><span className="product-badge">{product.badge}</span>{product.tone === "tire" ? <span className="product-tire" /> : product.tone === "battery" ? <span className="product-battery"><i /><b>+  −</b></span> : <span className="product-oil"><i /></span>}<button type="button" className="product-heart" aria-label="افزودن به علاقه‌مندی‌ها" onClick={() => onToast("به فهرست علاقه‌مندی‌ها اضافه شد")}><Icon name="gift" size={15} /></button></div><div className="product-info"><span className="product-category">{category === "همهٔ قطعات" ? "قطعات منتخب" : category}</span><h3>{product.name}</h3><p>{product.detail}</p><div className="product-bottom"><strong>{product.price} <small>تومان</small></strong><button type="button" onClick={() => onToast(`${product.name} به سبد خرید اضافه شد`)} aria-label="افزودن به سبد خرید"><Icon name="plus" size={17} /></button></div></div></article>)}</div>
-  </div>;
-}
+function MarketView({ onBack }: { onBack: () => void; onToast: (message: string) => void }) { return <MarketStore onBack={onBack} />; }
 
 function HallView({ onBack, onToast }: { onBack: () => void; onToast: (message: string) => void }) {
   const cars = [
@@ -728,7 +694,8 @@ export default function Dashboard() {
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [chatOpen, setChatOpen] = useState(false);
   const [toast, setToast] = useState("");
-  const [balance] = useState(0);
+  const wallet = useWallet();
+  const balance = wallet.data?.balanceToman || 0;
   const [request, setRequest] = useState<SubmittedRequest | null>(null);
   const [latestRequest, setLatestRequest] = useState<AssistanceRequest | null>(null);
 
@@ -768,7 +735,6 @@ export default function Dashboard() {
     navigate("service");
   }
 
-  function addBalance() { notify("پرداخت و کیف پول هنوز در سرور فعال نشده است."); }
 
 
   async function logout() {
@@ -786,7 +752,7 @@ export default function Dashboard() {
   let content: ReactNode;
   switch (view) {
     case "home": content = <HomeView latestRequest={latestRequest} balance={balance} onService={openService} onNavigate={navigate} onToast={notify} />; break;
-    case "wallet": content = <WalletView balance={balance} onAdd={addBalance} onBack={() => navigate("home")} />; break;
+    case "wallet": content = <WalletPanel onBack={() => navigate("home")} />; break;
     case "history": content = <HistoryView onBack={() => navigate("home")} onOpen={server => { const service = services.find(item => item.id === (server.service === "TOWING" ? "transport" : "roadside"))!; setRequest({ service, car: server.vehicleName, problem: server.problem || "", lat: server.originLat, lng: server.originLng, server }); navigate("waiting"); }} />; break;
     case "market": content = <MarketView onBack={() => navigate("home")} onToast={notify} />; break;
     case "hall": content = <HallView onBack={() => navigate("home")} onToast={notify} />; break;
