@@ -4,6 +4,7 @@ import {useWallet} from "@/lib/use-wallet";
 
 import Image from "next/image";
 import { MarketStore } from "./MarketStore";
+import { CarHall } from "./hall/CarHall";
 import { CustomerProfile } from "./CustomerProfile";
 import "./account-polish.css";
 import { IranPlate } from "@/components/IranPlate";
@@ -351,20 +352,6 @@ function HistoryView({ onBack, onOpen }: { onBack: () => void; onOpen: (request:
 
 function MarketView({ onBack }: { onBack: () => void; onToast: (message: string) => void }) { return <MarketStore onBack={onBack} />; }
 
-function HallView({ onBack, onToast }: { onBack: () => void; onToast: (message: string) => void }) {
-  const cars = [
-    { name: "پژو ۲۰۷ پانوراما", year: "۱۴۰۱", km: "۳۸٬۰۰۰", price: "۹۸۰٬۰۰۰٬۰۰۰", variant: "silver" as const, city: "تهران" },
-    { name: "دنا پلاس توربو", year: "۱۴۰۲", km: "۲۱٬۵۰۰", price: "۱٬۲۴۰٬۰۰۰٬۰۰۰", variant: "blue" as const, city: "کرج" },
-    { name: "تارا اتوماتیک", year: "۱۴۰۳", km: "۱۲٬۰۰۰", price: "۱٬۵۵۰٬۰۰۰٬۰۰۰", variant: "orange" as const, city: "تهران" },
-  ];
-  return <div className="subpage"><PageTitle title="تالار فروش خودرو" subtitle="جای مطمئن خرید و فروش خودروهای کارشناسی‌شده." onBack={onBack} action={<button className="primary-button compact-button" type="button" onClick={() => onToast("فرم ثبت خودرو به‌زودی در دسترس است")}><Icon name="plus" size={16} /> ثبت خودروی من</button>} />
-    <section className="hall-banner"><span className="hall-banner-mark"><Icon name="shield" size={24} /></span><div><span>خرید و فروش با اطمینان</span><h2>خودروی بعدی‌ات را اینجا پیدا کن.</h2><p>آگهی‌های بررسی‌شده، قیمت شفاف و همراهی کارشناسان.</p></div><div className="hall-banner-stats"><strong>+۲,۴۰۰</strong><small>خودروی آمادهٔ معامله</small></div></section>
-    <div className="market-toolbar"><div className="search-field"><Icon name="search" size={19} /><input placeholder="مدل یا برند خودرو را جست‌وجو کن" aria-label="جست‌وجوی خودرو" /></div><button className="filter-button" type="button" onClick={() => onToast("فیلترهای خودرو باز شد")}><Icon name="filter" size={17} /> فیلترها</button></div>
-    <div className="listing-heading"><SectionTitle title="خودروهای پیشنهادی" caption="انتخاب‌های تازه و کارشناسی‌شده" /><button className="sort-button" type="button" onClick={() => onToast("مرتب‌سازی بر اساس تازه‌ترین آگهی‌ها")}>جدیدترین <Icon name="chevron" size={15} /></button></div>
-    <div className="car-listing-grid">{cars.map((car, index) => <article className="car-listing-card" key={car.name}><div className={`listing-car-visual listing-car-visual--${car.variant}`}><span className="listing-tag">{index === 0 ? "کارشناسی‌شده" : "آگهی ویژه"}</span><MiniCar variant={car.variant} /><button className="product-heart" type="button" aria-label="ذخیرهٔ آگهی" onClick={() => onToast("آگهی به علاقه‌مندی‌ها اضافه شد")}><Icon name="gift" size={15} /></button></div><div className="listing-info"><div className="listing-title-line"><h3>{car.name}</h3><span>{car.year}</span></div><div className="listing-specs"><span><Icon name="car" size={14} />{car.km} کیلومتر</span><span><Icon name="pin" size={14} />{car.city}</span></div><div className="listing-price-line"><strong>{car.price} <small>تومان</small></strong><button type="button" onClick={() => onToast(`جزئیات ${car.name} در تالار خودرو`)} aria-label="مشاهده جزئیات"><Icon name="arrow-left" size={16} /></button></div></div></article>)}</div>
-  </div>;
-}
-
 function MyCarsView({ onBack, onToast }: { onBack: () => void; onToast: (message: string) => void }) {
   const [cars, setCars] = useState<Vehicle[]>([]);
   const [adding, setAdding] = useState(false);
@@ -689,6 +676,12 @@ function AIChat({ open, setOpen }: { open: boolean; setOpen: (open: boolean) => 
 export default function Dashboard() {
   const router = useRouter();
   const [view, setView] = useState<View>("home");
+  useEffect(() => {
+    if (new URLSearchParams(window.location.search).get("view") !== "hall") return;
+    const timer = window.setTimeout(() => setView("hall"), 0);
+    return () => window.clearTimeout(timer);
+  }, []);
+
   
   const [selectedService, setSelectedService] = useState<Service>(services[0]);
   const [drawerOpen, setDrawerOpen] = useState(false);
@@ -755,7 +748,7 @@ export default function Dashboard() {
     case "wallet": content = <WalletPanel onBack={() => navigate("home")} />; break;
     case "history": content = <HistoryView onBack={() => navigate("home")} onOpen={server => { const service = services.find(item => item.id === (server.service === "TOWING" ? "transport" : "roadside"))!; setRequest({ service, car: server.vehicleName, problem: server.problem || "", lat: server.originLat, lng: server.originLng, server }); navigate("waiting"); }} />; break;
     case "market": content = <MarketView onBack={() => navigate("home")} onToast={notify} />; break;
-    case "hall": content = <HallView onBack={() => navigate("home")} onToast={notify} />; break;
+    case "hall": content = <CarHall onBack={() => navigate("home")} />; break;
     case "profile": content = <CustomerProfile onBack={() => navigate("home")} />; break;
     case "mycars": content = <MyCarsView onBack={() => navigate("home")} onToast={notify} />; break;
     case "addresses": content = <AddressesView onBack={() => navigate("home")} onToast={notify} />; break;
