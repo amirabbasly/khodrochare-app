@@ -12,7 +12,7 @@ function AuthVisual() {
     <aside className="auth-visual" aria-label="پیام خودرو چاره">
       <div className="auth-logo-frame">
         <Image
-          src="/khodrochare-3d-logo.webp"
+          src="/khodrochare-wordmark.png"
           alt="لوگوی خودرو چاره"
           width={2172}
           height={724}
