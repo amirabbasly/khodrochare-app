@@ -1,0 +1,17 @@
+"use client";
+import {useEffect,useId,useRef,useState} from 'react';
+import {api,errorMessage} from '@/lib/api';
+import {type HallVehicle} from './types';
+export function HallVehicleSearch({value,onSelect,onClear,label='خودرو',required=false}:{value:{make:string;model:string;trim:string};onSelect:(vehicle:HallVehicle)=>void;onClear:()=>void;label?:string;required?:boolean}){
+  const id=useId(),input=useRef<HTMLInputElement>(null);
+  const [query,setQuery]=useState(()=>[value.make,value.model,value.trim==='نامشخص'?'':value.trim].filter(Boolean).join(' ')),[items,setItems]=useState<HallVehicle[]>([]),[busy,setBusy]=useState(false),[error,setError]=useState(''),[active,setActive]=useState(0),[open,setOpen]=useState(false);
+  const selected=Boolean(value.make&&value.model);
+  useEffect(()=>{input.current?.setCustomValidity(required&&!selected?'خودرو را از نتایج جست‌وجو انتخاب کنید.':'');},[required,selected]);
+  useEffect(()=>{
+    if(selected||query.trim().length<2)return;
+    const controller=new AbortController(),timer=setTimeout(()=>{setBusy(true);setError('');api<{items:HallVehicle[]}>(`/hall/vehicles?q=${encodeURIComponent(query.trim())}`,{auth:false,signal:controller.signal}).then(r=>{if(!controller.signal.aborted){setItems(r.items);setOpen(true);}}).catch(e=>{if(!controller.signal.aborted)setError(errorMessage(e));}).finally(()=>{if(!controller.signal.aborted)setBusy(false);});},300);
+    return()=>{controller.abort();clearTimeout(timer);};
+  },[query,selected]);
+  function pick(vehicle:HallVehicle){setQuery([vehicle.maker,vehicle.model,vehicle.trim==='نامشخص'?'':vehicle.trim].filter(Boolean).join(' '));setItems([]);setOpen(false);onSelect(vehicle);}
+  return <div className="ch-vehicle-search" onBlur={e=>{if(!e.currentTarget.contains(e.relatedTarget as Node|null))setOpen(false);}}><label htmlFor={id}>{label}</label><input ref={input} id={id} role="combobox" required={required} autoComplete="off" maxLength={100} placeholder="مثلاً ۲۰۷، مزدا ۳ یا لوکانو" aria-autocomplete="list" aria-expanded={open&&items.length>0} aria-controls={`${id}-results`} aria-activedescendant={open&&items[active]?`${id}-result-${active}`:undefined} value={query} onFocus={()=>{if(items.length)setOpen(true);}} onChange={e=>{setQuery(e.target.value);onClear();setItems([]);setActive(0);setOpen(false);setError('');}} onKeyDown={e=>{if(e.key==='Escape'){if(open){e.preventDefault();e.stopPropagation();setOpen(false);}return;}if(!items.length)return;if(e.key==='ArrowDown'){e.preventDefault();setOpen(true);setActive(i=>(i+1)%items.length);}if(e.key==='ArrowUp'){e.preventDefault();setOpen(true);setActive(i=>(i+items.length-1)%items.length);}if(e.key==='Enter'&&open){e.preventDefault();pick(items[active]||items[0]);}}}/>{busy&&<small role="status">در حال جست‌وجوی خودرو…</small>}{error&&<p className="ch-error" role="alert">{error}</p>}{open&&items.length>0&&<ul id={`${id}-results`} role="listbox" aria-label="نتایج جست‌وجوی خودرو">{items.map((vehicle,i)=><li id={`${id}-result-${i}`} role="option" aria-selected={active===i} key={vehicle.id||`${vehicle.maker}:${vehicle.model}:${vehicle.trim}`}><button type="button" tabIndex={-1} onMouseDown={e=>e.preventDefault()} onClick={()=>pick(vehicle)}><strong>{vehicle.maker} {vehicle.model}</strong><small>{vehicle.trim}</small></button></li>)}</ul>}{open&&!busy&&!error&&!items.length&&query.trim().length>=2&&!selected&&<small role="status">خودرویی پیدا نشد؛ نام یا مدل دیگری بنویسید.</small>}</div>;
+}

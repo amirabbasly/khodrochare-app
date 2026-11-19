@@ -40,6 +40,9 @@ type View =
 type SubmittedRequest = { service: Service; car: string; problem: string; lat: number; lng: number; server: AssistanceRequest };
 type Service = { id: ServiceId; name: string; note: string; category: string };
 
+const serviceAvailable = (service: Service) => service.id === "roadside" || service.id === "transport";
+function ComingSoonTag({id}:{id?:string}) { return <span id={id} className="home-coming-soon-tag">به‌زودی</span>; }
+
 const services: Service[] = [
   { id: "roadside", name: "امداد خودرو", note: "همیشه در راه", category: "امداد" },
   { id: "transport", name: "حمل خودرو", note: "امن و مطمئن", category: "امداد" },
@@ -188,8 +191,9 @@ function HeroSlider({ onService, onExplore }: { onService: (service: Service) =>
             <span className="hero-slide-tag">{slide.tag}</span>
             <h2>{slide.title}</h2>
             <p>{slide.description}</p>
-            <button className="hero-slide-cta" type="button" tabIndex={index === current ? 0 : -1} onClick={handleAction}>
-              {slide.action} <Icon name="arrow-left" size={16} />
+            <button className={`hero-slide-cta${index === 1 ? " home-feature-pending home-feature-pending--compact" : ""}`} disabled={index === 1} type="button" tabIndex={index === current ? 0 : -1} onClick={handleAction}>
+              {index === 1 && <ComingSoonTag/>}
+              <span>{slide.action}</span> <Icon name="arrow-left" size={16} />
             </button>
           </div>
         </article>
@@ -223,8 +227,9 @@ function BannerStrip({ onAction }: { onAction: (index: number) => void }) {
               <span className="banner-strip-tag">{slide.tag}</span>
               <h3>{slide.title}</h3>
               <p>{slide.description}</p>
-              <button className="banner-slide-link" type="button" onClick={() => onAction(index)}>
-                بیشتر ببین <Icon name="arrow-left" size={14} />
+              <button className={`banner-slide-link${index > 1 ? " home-feature-pending home-feature-pending--compact" : ""}`} disabled={index > 1} type="button" onClick={() => onAction(index)}>
+                {index > 1 && <ComingSoonTag/>}
+                <span>بیشتر ببین</span> <Icon name="arrow-left" size={14} />
               </button>
             </div>
           </article>
@@ -236,7 +241,8 @@ function BannerStrip({ onAction }: { onAction: (index: number) => void }) {
 
 function ServiceCard({ service, onClick, delay }: { service: Service; onClick: () => void; delay?: number }) {
   return (
-    <button className={`service-card service-card--${service.id}`} type="button" onClick={onClick}>
+    <button className={`service-card service-card--${service.id}${!serviceAvailable(service) ? " home-feature-pending" : ""}`} disabled={!serviceAvailable(service)} type="button" onClick={onClick}>
+      {!serviceAvailable(service) && <ComingSoonTag/>}
       <ServiceIllustration type={service.id} size="md" delay={delay} />
       <span className="service-name">{service.name}</span>
       <span className="service-note">{service.note}</span>
@@ -290,11 +296,13 @@ function HomeView({
         </button>
 
         <div className="bento-stack">
-          <button className="bento-mini" type="button" onClick={() => onService(services[9])}>
+          <button className="bento-mini home-feature-pending" disabled type="button" onClick={() => onService(services[9])}>
+            <ComingSoonTag/>
             <span className="bento-mini-icon"><ServiceIllustration type="reminder" size="sm" delay={0.25} /></span>
             <span className="bento-mini-copy"><small>سرویس دوره‌ای</small><strong>۴۵ <em>روز</em></strong><span>باقی‌مانده</span></span>
           </button>
-          <button className="bento-mini" type="button" onClick={() => onService(services[9])}>
+          <button className="bento-mini home-feature-pending" disabled type="button" onClick={() => onService(services[9])}>
+            <ComingSoonTag/>
             <span className="bento-mini-icon"><ServiceIllustration type="oil" size="sm" delay={0.55} /></span>
             <span className="bento-mini-copy"><small>سرویس روغن</small><strong>۱۲ <em>روز</em></strong><span>باقی‌مانده</span></span>
           </button>
@@ -305,7 +313,8 @@ function HomeView({
         <SectionTitle title="خدمات اصلی خودرو چاره" caption="چهار خدمت پرطرفدار ما، همیشه آمادهٔ کمک به تو." />
         <div className="main-services-grid">
           {mainServices.map((service, index) => (
-            <button key={service.id} className={`main-service-card main-service-card--${service.id}`} type="button" onClick={() => onService(service)}>
+            <button key={service.id} className={`main-service-card main-service-card--${service.id}${!serviceAvailable(service) ? " home-feature-pending" : ""}`} disabled={!serviceAvailable(service)} type="button" onClick={() => onService(service)}>
+              {!serviceAvailable(service) && <ComingSoonTag/>}
               <span className="main-service-art"><ServiceIllustration type={service.id} size="lg" delay={index * 0.35} /></span>
               <strong>{service.name}</strong>
               <small>{service.note}</small>
@@ -324,8 +333,8 @@ function HomeView({
         />
         <div className="services-grid">
           {moreServices.map((service, index) => <ServiceCard key={service.id} service={service} onClick={() => onService(service)} delay={index * 0.18} />)}
-          <button className="service-card service-card--more" type="button" onClick={() => onToast("به‌زودی خدمات بیشتری به خودرو چاره اضافه می‌شود")}>
-            <MoreDots3D delay={0.4} />
+          <button className="service-card service-card--more home-feature-pending" disabled type="button" onClick={() => onToast("به‌زودی خدمات بیشتری به خودرو چاره اضافه می‌شود")}>
+            <ComingSoonTag/><MoreDots3D delay={0.4} />
             <span className="service-name">بیشتر</span>
             <span className="service-note">به‌زودی بیشتر</span>
           </button>
@@ -477,7 +486,7 @@ function ServiceView({
   async function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     if (busy) return;
-    if (!["roadside", "transport"].includes(service.id)) { onToast("ثبت درخواست این خدمت هنوز در سرور فعال نشده است."); return; }
+    if (!serviceAvailable(service)) { onToast("ثبت درخواست این خدمت هنوز در سرور فعال نشده است."); return; }
     if ((service.id === "transport" && !towingBody) || (service.id !== "transport" && !coords)) { onToast("مبدأ و مقصد موردنیاز را انتخاب کنید."); return; }
     if (service.id === "transport" && !currentEstimate?.value) { onToast(currentEstimate?.error || "ابتدا نام خودرو و آدرس‌های مبدأ و مقصد را انتخاب کنید و منتظر محاسبه مبلغ بمانید."); return; }
     setBusy(true);
@@ -660,7 +669,7 @@ function WaitingView({
   );
 }
 
-function AIChat({ open, setOpen }: { open: boolean; setOpen: (open: boolean) => void }) {
+function AIChat({ open, setOpen, disabled=false }: { open: boolean; setOpen: (open: boolean) => void; disabled?: boolean }) {
   const [text, setText] = useState("");
   const [messages, setMessages] = useState([{ from: "bot", text: "سلام! من چاره‌یارم. برای چه چیزی دربارهٔ ماشینت کمکت کنم؟" }]);
   function send(event: FormEvent<HTMLFormElement>) {
@@ -668,8 +677,8 @@ function AIChat({ open, setOpen }: { open: boolean; setOpen: (open: boolean) => 
     const question = text.trim(); setMessages((items) => [...items, { from: "user", text: question }, { from: "bot", text: "حتماً! برای راهنمایی دقیق‌تر، از بخش خدمات یک گزینه انتخاب کن یا موضوعت را با کارشناس خودرو چاره در میان بگذار." }]); setText("");
   }
   return <>
-    {open && <section className="chat-window" aria-label="گفت‌وگو با چاره‌یار"><div className="chat-header"><span className="chat-avatar"><span>AI</span></span><div><strong>چاره‌یار</strong><small><i />همراه هوشمند تو</small></div><button type="button" onClick={() => setOpen(false)} aria-label="بستن گفت‌وگو"><Icon name="close" size={19} /></button></div><div className="chat-messages">{messages.map((message, index) => <p key={`${message.from}-${index}`} className={`chat-bubble${message.from === "user" ? " chat-bubble--user" : ""}`}>{message.text}</p>)}</div><form className="chat-input-row" onSubmit={send}><input value={text} onChange={(event) => setText(event.target.value)} placeholder="پیامت را بنویس…" aria-label="پیام شما" /><button type="submit" aria-label="ارسال پیام"><Icon name="send" size={17} /></button></form><div className="chat-demo-note">همراه هوشمند خودرو چاره</div></section>}
-    <button className={`ai-fab${open ? " ai-fab--open" : ""}`} type="button" onClick={() => setOpen(!open)} aria-label={open ? "بستن چاره‌یار" : "گفت‌وگو با هوش مصنوعی"}><span className="ai-fab-mascot"><AiMascot /></span><span className="ai-fab-copy">چاره‌یار <small>پشتیبانی هوشمند</small></span>{open && <Icon name="close" size={18} />}</button>
+    {open && !disabled && <section className="chat-window" aria-label="گفت‌وگو با چاره‌یار"><div className="chat-header"><span className="chat-avatar"><span>AI</span></span><div><strong>چاره‌یار</strong><small><i />همراه هوشمند تو</small></div><button type="button" onClick={() => setOpen(false)} aria-label="بستن گفت‌وگو"><Icon name="close" size={19} /></button></div><div className="chat-messages">{messages.map((message, index) => <p key={`${message.from}-${index}`} className={`chat-bubble${message.from === "user" ? " chat-bubble--user" : ""}`}>{message.text}</p>)}</div><form className="chat-input-row" onSubmit={send}><input value={text} onChange={(event) => setText(event.target.value)} placeholder="پیامت را بنویس…" aria-label="پیام شما" /><button type="submit" aria-label="ارسال پیام"><Icon name="send" size={17} /></button></form><div className="chat-demo-note">همراه هوشمند خودرو چاره</div></section>}
+    <button className={`ai-fab${open && !disabled ? " ai-fab--open" : ""}${disabled ? " home-feature-pending" : ""}`} disabled={disabled} aria-describedby={disabled ? "home-ai-coming-soon" : undefined} type="button" onClick={() => setOpen(!open)} aria-label={open && !disabled ? "بستن چاره‌یار" : "گفت‌وگو با هوش مصنوعی"}>{disabled && <ComingSoonTag id="home-ai-coming-soon"/>}<span className="ai-fab-mascot"><AiMascot /></span><span className="ai-fab-copy">چاره‌یار <small>پشتیبانی هوشمند</small></span>{open && !disabled && <Icon name="close" size={18} />}</button>
   </>;
 }
 
@@ -769,7 +778,7 @@ export default function Dashboard() {
         <div className="app-header-inner">
           <div className="header-menu-wrap"><button className={`menu-button${drawerOpen ? " menu-button--active" : ""}`} type="button" onClick={() => setDrawerOpen(true)} aria-label="باز کردن منو"><span /><span /><span /></button><span className="menu-word">منو</span></div>
           <button className="header-brand-button" type="button" onClick={() => navigate("home")} aria-label="بازگشت به خانه"><BrandLogo compact /></button>
-          <div className="header-meta"><button className="header-profile-chip" type="button" onClick={() => navigate("profile")}><Avatar name={userName} /><span className="header-profile-text"><strong>{userName}</strong><small>کیف پول <b>{balance.toLocaleString("fa-IR")}</b></small></span></button><button className="notification-button" type="button" onClick={() => navigate("notifications")} aria-label="اعلان‌ها"><Icon name="bell" size={20} /><i /></button></div>
+          <div className="header-meta"><button className="header-profile-chip" type="button" onClick={() => navigate("profile")}><Avatar name={userName} /><span className="header-profile-text"><strong>{userName}</strong><small>کیف پول <b>{balance.toLocaleString("fa-IR")}</b></small></span></button><button className={`notification-button${view === "home" ? " home-feature-pending home-feature-pending--compact" : ""}`} disabled={view === "home"} aria-describedby={view === "home" ? "home-notifications-coming-soon" : undefined} type="button" onClick={() => navigate("notifications")} aria-label="اعلان‌ها"><Icon name="bell" size={20} />{view === "home" ? <ComingSoonTag id="home-notifications-coming-soon"/> : <i />}</button></div>
         </div>
       </header>
 
@@ -783,7 +792,7 @@ export default function Dashboard() {
         <div className="drawer-content"><span className="drawer-section-label">خدمات و حساب من</span><nav className="drawer-nav">{drawerItems.map((item) => <button type="button" key={item.view} onClick={() => navigate(item.view)} className={view === item.view ? "is-current" : ""}><span className="drawer-nav-icon"><Icon name={item.icon} size={18} /></span><span>{item.label}</span><Icon name="chevron" size={15} className="drawer-arrow" /></button>)}</nav><button className="drawer-logout" type="button" onClick={logout}><span><Icon name="logout" size={18} /></span>خروج</button><div className="drawer-footer"><BrandLogo compact /><span>خودرو چاره · نسخه ۱.۰.۰</span></div></div>
       </aside>
 
-      <AIChat open={chatOpen} setOpen={setChatOpen} />
+      <AIChat open={chatOpen} setOpen={setChatOpen} disabled={view === "home"} />
       {toast && <div className="toast-message" role="status"><span><Icon name="check" size={17} /></span>{toast}<button type="button" onClick={() => setToast("")} aria-label="بستن پیام"><Icon name="close" size={15} /></button></div>}
     </div>
   );

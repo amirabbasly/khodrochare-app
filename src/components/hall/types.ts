@@ -1,6 +1,10 @@
-export type Details={make:string;model:string;trim:string;year?:number;mileage?:number;color:string;bodyCondition:string;technicalCondition:string;city:string;description:string;contactPhone:string;priceToman?:number};
+export const fuelTypes=['بنزین','دیزل','دوگانه‌سوز','هیبریدی','برقی','گازسوز'] as const;
+export const gearboxTypes=['دستی','اتوماتیک','نیمه‌اتوماتیک'] as const;
+export type HallLocation={latitude:number;longitude:number;visibility:'EXACT'|'AREA';address?:string;radiusMeters?:number};
+export type HallVehicle={id:string;maker:string;model:string;trim:string};
+export type Details={fuelType?:typeof fuelTypes[number];gearboxType?:typeof gearboxTypes[number];location?:HallLocation;chassisCondition?:string;gearboxCondition?:string;make:string;model:string;trim:string;year?:number;mileage?:number;color:string;bodyCondition:string;technicalCondition:string;city:string;description:string;contactPhone:string;priceToman?:number};
 export type Photo={id:string;url:string};
-export type Listing={id:string;status:string;version:number;contactPhone?:string;make:string;model:string;trim:string;year:number;mileage:number;city:string;color:string;description:string;bodyCondition:string;technicalCondition:string;inspectionStatus:string;inspectionNote?:string;priceToman:number;viewCount:number;publishedAt:string;featuredUntil?:string;urgentUntil?:string;ladderUntil?:string;photos:Photo[];details?:Partial<Details>;services:{name:string;code:string;until:string;mode:string}[];_count?:{inquiries:number}};
+export type Listing={fuelType?:string;gearboxType?:string;location?:HallLocation;chassisCondition?:string;gearboxCondition?:string;id:string;status:string;version:number;contactPhone?:string;make:string;model:string;trim:string;year:number;mileage:number;city:string;color:string;description:string;bodyCondition:string;technicalCondition:string;inspectionStatus:string;inspectionNote?:string;priceToman:number;viewCount:number;publishedAt:string;featuredUntil?:string;urgentUntil?:string;ladderUntil?:string;photos:Photo[];details?:Partial<Details>;services:{name:string;code:string;until:string;mode:string}[];_count?:{inquiries:number}};
 export type Plan={code:string;name:string;kind:'PLAN'|'BOOST';description:string;priceToman:number;services:string[];terms:string;active:boolean;durationHours:number;sortOrder:number};
 export type Banner={id:string;title:string;subtitle:string;imageUrl:string;linkUrl:string};
 export type Catalog={plans:Plan[];banners:Banner[];paymentMode:string;tariffNotice:string};

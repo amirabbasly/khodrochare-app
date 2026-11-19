@@ -137,9 +137,14 @@ test("driver login, GPS, acceptance and status changes use real API contracts", 
   await expect(page).toHaveURL(/\/home$/);
   await dismissLocation(page);
   await page.locator(".header-ready-switch").click();
+  // Refresh the emulated fix after login: an earlier one can be older than
+  // currentPosition's 10-second maximumAge by the time the page is ready.
+  await context.setGeolocation({ latitude: 35.71, longitude: 51.41 });
+  await expect.poll(() => state.gps, { timeout: 20000 }).toBe(true);
   await page.getByRole("button", { name: "تأیید و گرفتن بار" }).click();
   await expect(page.locator(".job-layout")).toBeVisible();
   expect(state.gps).toBe(true);
+  expect(calls.find(c => c.route === "/drivers/location")?.body).toMatchObject({ latitude: 35.71, longitude: 51.41 });
   expect(calls.some(c => c.route === "/auth/drivers/login")).toBe(true);
   await page.locator(".job-actions .primary-button").click();
   await expect.poll(() => state.requests[0].status).toBe("ARRIVED");

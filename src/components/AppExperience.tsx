@@ -37,26 +37,18 @@ export function SplashGate({ children }: { children: ReactNode }) {
           <div className="splash-tire-ring splash-tire-ring--outer" />
           <div className="splash-tire-ring splash-tire-ring--inner" />
           <div className="splash-content">
-            <div className="splash-logo-wrap splash-brand-row" aria-label="خودرو چاره">
-              <Image
-                src="/khodrochare-wordmark.png"
-                alt="نام خودرو چاره"
-                width={2172}
-                height={724}
-                sizes="(max-width: 640px) 142px, 188px"
-                priority
-                className="splash-brand-wordmark"
-              />
+            <div className="splash-logo-wrap splash-brand-single" aria-label="خودرو چاره">
               <Image
                 src="/khodrochare-symbol-transparent.webp"
                 alt="نشان خودرو چاره"
                 width={600}
                 height={600}
-                sizes="(max-width: 640px) 142px, 188px"
+                sizes="(max-height: 520px) 112px, (max-width: 640px) 150px, 210px"
                 priority
                 className="splash-brand-symbol"
               />
             </div>
+            <div className="splash-details">
             <p className="splash-type-line" aria-live="polite"><span>{typedMessage}</span><i className="splash-cursor" /></p>
             <p className="splash-subtitle">اگر تو راه موندی و عجله داری، سریع تماس بگیر.</p>
             <a className="splash-phone" href="tel:02191855" dir="ltr" aria-label="تماس با خودرو چاره: ۰۲۱ ۹۱۸۵۵">
@@ -65,6 +57,7 @@ export function SplashGate({ children }: { children: ReactNode }) {
               <strong className="splash-phone-number">۹۱۸۵۵</strong>
             </a>
             <div className="splash-loader" aria-hidden="true"><span /></div>
+            </div>
           </div>
           <span className="splash-footer">همراه مطمئن تو در هر مسیر</span>
         </div>

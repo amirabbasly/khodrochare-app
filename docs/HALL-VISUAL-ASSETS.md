@@ -5,7 +5,7 @@ Created with the built-in `image_gen` tool. The logo edit used the repository's 
 | Production file | Purpose | Export |
 | --- | --- | --- |
 | `public/khodrochare-symbol-transparent.webp` | Main symbol on splash and central navigation action | 600 × 600, true alpha, about 63 KB |
-| `public/khodrochare-wordmark.png` | Existing textual brand asset, right side of splash | Existing original, unchanged |
+| `public/khodrochare-wordmark.png` | Existing textual brand asset for the header; excluded from splash | Existing original, unchanged |
 | `public/slides/hall-buy.webp` | Marketplace carousel background | 1536 × 1024, about 226 KB |
 | `public/slides/hall-inspection.webp` | Inspection carousel background | 1536 × 1024, about 145 KB |
 
@@ -28,5 +28,5 @@ Create a photorealistic premium automotive website carousel background, wide lan
 ## Verification
 
 - `npm run test:assets`: decode images, verify transparent exterior pixels, solid logo artwork, landscape dimensions and compressed size.
-- `npx playwright test --config playwright.hall.config.ts`: carousel navigation, real image loading, right-hand photos, responsive card layout and equal splash logo boxes in RTL order, alongside publication/captcha, filters, contact, deletion and chat scenarios.
+- `npx playwright test --config playwright.hall.config.ts`: carousel navigation, real image loading, right-hand photos, responsive card layout and a single transparent splash symbol centered in both viewport axes, alongside publication/captcha, filters, contact, deletion and chat scenarios.
 - `npm run build` and `npm run lint`.

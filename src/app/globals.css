@@ -7509,5 +7509,25 @@ a {
 .bottom-nav-brand-symbol{display:block;width:44px;height:44px;object-fit:contain}
 .bottom-nav-rescue .bottom-nav-icon{overflow:visible}
 .splash-logo-wrap .splash-logo{width:min(52vw,230px);height:auto;object-fit:contain}
-.splash-logo-wrap.splash-brand-row{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);align-items:center;gap:20px;width:min(86vw,400px);direction:rtl;overflow:visible;background:transparent;border:0;box-shadow:none}
-.splash-brand-row>img{display:block;width:100%;height:clamp(124px,36vw,184px);object-fit:contain;filter:drop-shadow(0 8px 16px #0003)}
+/* Keep the symbol centered in the viewport, independently of the copy below. */
+.launch-splash .splash-content{position:absolute;inset:0;width:100%;height:100%;padding:0;display:block;--splash-symbol-size:clamp(96px,min(38vw,30dvh),210px)}
+.splash-logo-wrap.splash-brand-single{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);display:grid;place-items:center;width:var(--splash-symbol-size);height:var(--splash-symbol-size);overflow:visible;background:transparent;border:0;box-shadow:none;animation:none}
+.splash-brand-single>img{display:block;width:100%;height:100%;object-fit:contain;filter:drop-shadow(0 8px 16px #0003)}
+.splash-details{position:absolute;top:calc(50% + var(--splash-symbol-size)/2 + 14px);left:5%;right:5%;text-align:center}
+.splash-details .splash-type-line{margin:0 0 4px}
+.splash-details .splash-loader{margin-inline:auto}
+@media(max-height:520px){.splash-details .splash-type-line{min-height:28px;font-size:18px}.splash-details .splash-subtitle,.splash-details .splash-loader{display:none}.splash-details .splash-phone{margin-top:8px;padding:6px 18px}.splash-details .splash-phone-number{font-size:23px}}
+.launch-splash{background:radial-gradient(ellipse at 20% 32%,#f7a35022,transparent 40%),radial-gradient(ellipse at 80% 65%,#7bafca1c,transparent 42%),linear-gradient(145deg,#f5f8fa,#eaf1f5 55%,#f6f8fa);color:#153343}
+.launch-splash .splash-type-line{color:#153343}.launch-splash .splash-subtitle,.launch-splash .splash-footer{color:#526b79}.launch-splash .splash-cursor{background:#ed6a20}.launch-splash .splash-tire-ring{border-color:#15334310}.launch-splash .splash-phone{color:#153343;background:#ffffffa8;border-color:#cbd9e2}.launch-splash .splash-phone-prefix,.launch-splash .splash-phone-dash{color:#526b79}
+.launch-splash .splash-phone-number{color:#153343}
+
+/* Availability badges sit over existing controls without taking layout space. */
+.home-feature-pending:disabled{cursor:not-allowed;transform:none}
+:is(.service-card,.main-service-card,.bento-mini,.hero-slide-cta,.banner-slide-link,.notification-button).home-feature-pending{position:relative}
+.home-feature-pending> :not(.home-coming-soon-tag){opacity:.55}
+.home-coming-soon-tag{position:absolute;top:8px;inset-inline-end:8px;z-index:4;display:inline-flex;align-items:center;justify-content:center;border-radius:6px;background:#c62828;color:#fff;padding:3px 7px;font-family:inherit;font-size:10px;font-weight:700;line-height:1.5;white-space:nowrap;pointer-events:none;box-shadow:0 2px 5px #9e1a1a1a}
+.home-feature-pending:disabled:hover .service-art3d{transform:none}
+
+.home-feature-pending--compact .home-coming-soon-tag{top:-10px;inset-inline-end:-5px;font-size:9px;padding:2px 5px}
+.notification-button.home-feature-pending .home-coming-soon-tag{top:-7px;inset-inline-end:0;font-size:8px;padding:2px 4px}
+.ai-fab.home-feature-pending .home-coming-soon-tag{top:-4px;inset-inline-end:-4px;font-size:9px}
