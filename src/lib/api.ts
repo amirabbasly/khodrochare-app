@@ -63,6 +63,7 @@ function serverMessage(status: number, data: { error?: string; issues?: { path: 
     const fields: Record<string, string> = { fullName: "نام و نام خانوادگی", phone: "شماره تماس", password: "رمز عبور (حداقل ۸ کاراکتر)", nationalId: "کد ملی", vehiclePlate: "پلاک خودرو", origin: "مبدأ", destination: "مقصد", problem: "مشکل خودرو", services: "خدمات", identityDocument: "مدرک هویتی" };
     return `اطلاعات ${fields[String(data.issues[0].path[0])] || "فرم"} معتبر نیست.`;
   }
+  if (status < 500 && typeof data.error === 'string' && /[\u0600-\u06ff]/.test(data.error)) return data.error.slice(0, 1000);
   const known: Record<string, string> = {
     "SMS provider not configured": "سرویس پیامک هنوز فعال نیست؛ هشدار داخل برنامه را بدون گزینه پیامک ثبت کنید.",
     "Market product not found": "این قطعه پیدا نشد یا دیگر فعال نیست.",

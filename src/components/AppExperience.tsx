@@ -39,10 +39,10 @@ export function SplashGate({ children }: { children: ReactNode }) {
           <div className="splash-content">
             <div className="splash-logo-wrap">
               <Image
-                src="/khodrochare-wordmark.png"
+                src="/khodrochare-symbol.png"
                 alt="لوگوی خودرو چاره"
-                width={2172}
-                height={724}
+                width={512}
+                height={512}
                 sizes="(max-width: 640px) 370px, 405px"
                 priority
                 className="splash-logo"
