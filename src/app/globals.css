@@ -7509,3 +7509,5 @@ a {
 .bottom-nav-brand-symbol{display:block;width:44px;height:44px;object-fit:contain}
 .bottom-nav-rescue .bottom-nav-icon{overflow:visible}
 .splash-logo-wrap .splash-logo{width:min(52vw,230px);height:auto;object-fit:contain}
+.splash-logo-wrap.splash-brand-row{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);align-items:center;gap:20px;width:min(86vw,400px);direction:rtl;overflow:visible;background:transparent;border:0;box-shadow:none}
+.splash-brand-row>img{display:block;width:100%;height:clamp(124px,36vw,184px);object-fit:contain;filter:drop-shadow(0 8px 16px #0003)}

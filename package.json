@@ -7,7 +7,8 @@
     "build": "next build",
     "start": "next start",
     "lint": "eslint",
-    "test:e2e": "playwright test"
+    "test:e2e": "playwright test",
+    "test:assets": "node --test test-assets/brand-assets.test.mjs"
   },
   "dependencies": {
     "leaflet": "^1.9.4",

@@ -2,6 +2,7 @@ import Image from "next/image";
 import type { CSSProperties, ReactNode } from "react";
 
 type IconName =
+  | "camera"
   | "menu"
   | "bell"
   | "home"
@@ -40,6 +41,7 @@ type IconName =
   | "eye-off";
 
 const paths: Record<IconName, ReactNode> = {
+  camera: <><path d="M8 6l1.5-2h5L16 6h3a2 2 0 0 1 2 2v10a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2z"/><circle cx="12" cy="12" r="3"/></>,
   menu: <><path d="M4 7h16M4 12h16M4 17h16" /></>,
   bell: <><path d="M18 9a6 6 0 0 0-12 0c0 7-3 7-3 9h18c0-2-3-2-3-9" /><path d="M10 21h4" /></>,
   home: <><path d="m3 10 9-7 9 7" /><path d="M5 9v11h14V9M9 20v-6h6v6" /></>,
