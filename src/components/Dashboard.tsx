@@ -3,6 +3,9 @@ import {WalletPanel} from "./WalletPanel";
 import {useWallet} from "@/lib/use-wallet";
 
 import Image from "next/image";
+import { usePendingFeature } from "./PendingFeature";
+import { SupportTickets } from "./SupportTickets";
+import { ServiceReminders } from "./ServiceReminders";
 import { MarketStore } from "./MarketStore";
 import { CarHall } from "./hall/CarHall";
 import { CustomerProfile } from "./CustomerProfile";
@@ -32,6 +35,7 @@ type View =
   | "mycars"
   | "addresses"
   | "invite"
+  | "reminder"
   | "support"
   | "notifications"
   | "service"
@@ -40,8 +44,7 @@ type View =
 type SubmittedRequest = { service: Service; car: string; problem: string; lat: number; lng: number; server: AssistanceRequest };
 type Service = { id: ServiceId; name: string; note: string; category: string };
 
-const serviceAvailable = (service: Service) => service.id === "roadside" || service.id === "transport";
-function ComingSoonTag({id}:{id?:string}) { return <span id={id} className="home-coming-soon-tag">به‌زودی</span>; }
+const serviceAvailable = (service: Service) => ["roadside","transport","expert","reminder"].includes(service.id);
 
 const services: Service[] = [
   { id: "roadside", name: "امداد خودرو", note: "همیشه در راه", category: "امداد" },
@@ -191,8 +194,7 @@ function HeroSlider({ onService, onExplore }: { onService: (service: Service) =>
             <span className="hero-slide-tag">{slide.tag}</span>
             <h2>{slide.title}</h2>
             <p>{slide.description}</p>
-            <button className={`hero-slide-cta${index === 1 ? " home-feature-pending home-feature-pending--compact" : ""}`} disabled={index === 1} type="button" tabIndex={index === current ? 0 : -1} onClick={handleAction}>
-              {index === 1 && <ComingSoonTag/>}
+            <button className="hero-slide-cta" aria-haspopup={index === 1 ? "dialog" : undefined} type="button" tabIndex={index === current ? 0 : -1} onClick={handleAction}>
               <span>{slide.action}</span> <Icon name="arrow-left" size={16} />
             </button>
           </div>
@@ -227,8 +229,7 @@ function BannerStrip({ onAction }: { onAction: (index: number) => void }) {
               <span className="banner-strip-tag">{slide.tag}</span>
               <h3>{slide.title}</h3>
               <p>{slide.description}</p>
-              <button className={`banner-slide-link${index > 1 ? " home-feature-pending home-feature-pending--compact" : ""}`} disabled={index > 1} type="button" onClick={() => onAction(index)}>
-                {index > 1 && <ComingSoonTag/>}
+              <button className="banner-slide-link" aria-haspopup={index > 1 ? "dialog" : undefined} type="button" onClick={() => onAction(index)}>
                 <span>بیشتر ببین</span> <Icon name="arrow-left" size={14} />
               </button>
             </div>
@@ -241,8 +242,7 @@ function BannerStrip({ onAction }: { onAction: (index: number) => void }) {
 
 function ServiceCard({ service, onClick, delay }: { service: Service; onClick: () => void; delay?: number }) {
   return (
-    <button className={`service-card service-card--${service.id}${!serviceAvailable(service) ? " home-feature-pending" : ""}`} disabled={!serviceAvailable(service)} type="button" onClick={onClick}>
-      {!serviceAvailable(service) && <ComingSoonTag/>}
+    <button className={`service-card service-card--${service.id}`} aria-haspopup={!serviceAvailable(service) ? "dialog" : undefined} type="button" onClick={onClick}>
       <ServiceIllustration type={service.id} size="md" delay={delay} />
       <span className="service-name">{service.name}</span>
       <span className="service-note">{service.note}</span>
@@ -253,7 +253,6 @@ function ServiceCard({ service, onClick, delay }: { service: Service; onClick: (
 function HomeView({
   onService,
   onNavigate,
-  onToast,
   balance,
   latestRequest,
 }: {
@@ -263,6 +262,7 @@ function HomeView({
   balance: number;
   latestRequest?: AssistanceRequest | null;
 }) {
+  const showPendingFeature = usePendingFeature();
   const mainServices = services.slice(0, 4);
   const moreServices = services.slice(4);
 
@@ -296,15 +296,13 @@ function HomeView({
         </button>
 
         <div className="bento-stack">
-          <button className="bento-mini home-feature-pending" disabled type="button" onClick={() => onService(services[9])}>
-            <ComingSoonTag/>
+          <button className="bento-mini" type="button" onClick={() => onService(services[9])}>
             <span className="bento-mini-icon"><ServiceIllustration type="reminder" size="sm" delay={0.25} /></span>
-            <span className="bento-mini-copy"><small>سرویس دوره‌ای</small><strong>۴۵ <em>روز</em></strong><span>باقی‌مانده</span></span>
+            <span className="bento-mini-copy"><small>سرویس دوره‌ای</small><strong>برنامه سرویس</strong><span>مشاهده و ثبت سوابق</span></span>
           </button>
-          <button className="bento-mini home-feature-pending" disabled type="button" onClick={() => onService(services[9])}>
-            <ComingSoonTag/>
+          <button className="bento-mini" type="button" onClick={() => onService(services[9])}>
             <span className="bento-mini-icon"><ServiceIllustration type="oil" size="sm" delay={0.55} /></span>
-            <span className="bento-mini-copy"><small>سرویس روغن</small><strong>۱۲ <em>روز</em></strong><span>باقی‌مانده</span></span>
+            <span className="bento-mini-copy"><small>سرویس روغن</small><strong>ثبت تعویض</strong><span>محاسبه موعد بعدی</span></span>
           </button>
         </div>
       </section>
@@ -313,9 +311,8 @@ function HomeView({
         <SectionTitle title="خدمات اصلی خودرو چاره" caption="چهار خدمت پرطرفدار ما، همیشه آمادهٔ کمک به تو." />
         <div className="main-services-grid">
           {mainServices.map((service, index) => (
-            <button key={service.id} className={`main-service-card main-service-card--${service.id}${!serviceAvailable(service) ? " home-feature-pending" : ""}`} disabled={!serviceAvailable(service)} type="button" onClick={() => onService(service)}>
-              {!serviceAvailable(service) && <ComingSoonTag/>}
-              <span className="main-service-art"><ServiceIllustration type={service.id} size="lg" delay={index * 0.35} /></span>
+            <button key={service.id} className={`main-service-card main-service-card--${service.id}`} aria-haspopup={!serviceAvailable(service) ? "dialog" : undefined} type="button" onClick={() => onService(service)}>
+                      <span className="main-service-art"><ServiceIllustration type={service.id} size="lg" delay={index * 0.35} /></span>
               <strong>{service.name}</strong>
               <small>{service.note}</small>
             </button>
@@ -333,15 +330,15 @@ function HomeView({
         />
         <div className="services-grid">
           {moreServices.map((service, index) => <ServiceCard key={service.id} service={service} onClick={() => onService(service)} delay={index * 0.18} />)}
-          <button className="service-card service-card--more home-feature-pending" disabled type="button" onClick={() => onToast("به‌زودی خدمات بیشتری به خودرو چاره اضافه می‌شود")}>
-            <ComingSoonTag/><MoreDots3D delay={0.4} />
+          <button className="service-card service-card--more" aria-haspopup="dialog" type="button" onClick={showPendingFeature}>
+            <MoreDots3D delay={0.4} />
             <span className="service-name">بیشتر</span>
-            <span className="service-note">به‌زودی بیشتر</span>
+            <span className="service-note">خدمات بیشتر خودرو چاره</span>
           </button>
         </div>
       </section>
 
-      <BannerStrip onAction={(index) => (index === 0 ? onNavigate("market") : index === 1 ? onNavigate("hall") : index === 3 ? onService(services[4]) : onToast("پوشش خودرو چاره: تهران، کرج و کل شمال کشور"))} />
+      <BannerStrip onAction={(index) => (index === 0 ? onNavigate("market") : index === 1 ? onNavigate("hall") : index === 3 ? onService(services[4]) : showPendingFeature())} />
     </div>
   );
 }
@@ -412,14 +409,6 @@ function InviteView({ onBack, onToast }: { onBack: () => void; onToast: (message
   </div>;
 }
 
-function SupportView({ onBack, onToast }: { onBack: () => void; onToast: (message: string) => void }) {
-  const [message, setMessage] = useState("");
-  return <div className="subpage"><PageTitle title="تماس با پشتیبانی" subtitle="هر سؤالی داری، ما با خوشحالی پاسخ می‌دهیم." onBack={onBack} />
-    <section className="support-hero"><span className="support-orbit"><Icon name="support" size={32} /></span><div><span>همیشه کنار تو</span><h2>چطور می‌توانیم کمکت کنیم؟</h2><p>پاسخ‌گویی هر روز، از ساعت ۸ صبح تا ۱۲ شب.</p></div><button type="button" onClick={() => onToast("تماس با پشتیبانی: ۰۲۱-۹۱۰۰-۱۲۰۰")}><Icon name="phone" size={17} /> تماس با ما</button></section>
-    <div className="support-columns"><section className="panel-card faq-panel"><SectionTitle title="سؤال‌های پرتکرار" caption="شاید پاسخ سؤالت اینجا باشد." /><details><summary>چطور درخواست خدمات ثبت کنم؟ <span>+</span></summary><p>از صفحهٔ خانه خدمت موردنیاز را انتخاب کن، خودروی موردنظر و آدرس را وارد کن و درخواستت را ثبت کن.</p></details><details><summary>چطور خودروی جدید اضافه کنم؟ <span>+</span></summary><p>از منوی اپلیکیشن وارد «خودروهای من» شو و گزینهٔ افزودن خودرو را انتخاب کن.</p></details><details><summary>هزینهٔ خدمات را کجا ببینم؟ <span>+</span></summary><p>هزینهٔ نهایی پیش از تأیید درخواست به تو نمایش داده می‌شود.</p></details></section>
-      <section className="panel-card support-message"><div className="support-message-icon"><Icon name="chat" size={22} /></div><h2>پیامت را برای ما بفرست</h2><p>کارشناسان ما در کوتاه‌ترین زمان پاسخ می‌دهند.</p><form onSubmit={(event) => { event.preventDefault(); if (!message.trim()) return; setMessage(""); onToast("پیامت برای پشتیبانی ارسال شد"); }}><textarea value={message} onChange={(event) => setMessage(event.target.value)} placeholder="پیامت را اینجا بنویس…" required /><button className="primary-button" type="submit">ارسال پیام <Icon name="arrow-left" size={16} /></button></form></section></div>
-  </div>;
-}
 
 function NotificationsView({ onBack, onToast }: { onBack: () => void; onToast: (message: string) => void }) {
   const notices = [
@@ -670,6 +659,7 @@ function WaitingView({
 }
 
 function AIChat({ open, setOpen, disabled=false }: { open: boolean; setOpen: (open: boolean) => void; disabled?: boolean }) {
+  const showPendingFeature = usePendingFeature();
   const [text, setText] = useState("");
   const [messages, setMessages] = useState([{ from: "bot", text: "سلام! من چاره‌یارم. برای چه چیزی دربارهٔ ماشینت کمکت کنم؟" }]);
   function send(event: FormEvent<HTMLFormElement>) {
@@ -678,16 +668,18 @@ function AIChat({ open, setOpen, disabled=false }: { open: boolean; setOpen: (op
   }
   return <>
     {open && !disabled && <section className="chat-window" aria-label="گفت‌وگو با چاره‌یار"><div className="chat-header"><span className="chat-avatar"><span>AI</span></span><div><strong>چاره‌یار</strong><small><i />همراه هوشمند تو</small></div><button type="button" onClick={() => setOpen(false)} aria-label="بستن گفت‌وگو"><Icon name="close" size={19} /></button></div><div className="chat-messages">{messages.map((message, index) => <p key={`${message.from}-${index}`} className={`chat-bubble${message.from === "user" ? " chat-bubble--user" : ""}`}>{message.text}</p>)}</div><form className="chat-input-row" onSubmit={send}><input value={text} onChange={(event) => setText(event.target.value)} placeholder="پیامت را بنویس…" aria-label="پیام شما" /><button type="submit" aria-label="ارسال پیام"><Icon name="send" size={17} /></button></form><div className="chat-demo-note">همراه هوشمند خودرو چاره</div></section>}
-    <button className={`ai-fab${open && !disabled ? " ai-fab--open" : ""}${disabled ? " home-feature-pending" : ""}`} disabled={disabled} aria-describedby={disabled ? "home-ai-coming-soon" : undefined} type="button" onClick={() => setOpen(!open)} aria-label={open && !disabled ? "بستن چاره‌یار" : "گفت‌وگو با هوش مصنوعی"}>{disabled && <ComingSoonTag id="home-ai-coming-soon"/>}<span className="ai-fab-mascot"><AiMascot /></span><span className="ai-fab-copy">چاره‌یار <small>پشتیبانی هوشمند</small></span>{open && !disabled && <Icon name="close" size={18} />}</button>
+    <button className={`ai-fab${open && !disabled ? " ai-fab--open" : ""}`} aria-haspopup={disabled ? "dialog" : undefined} type="button" onClick={() => disabled ? showPendingFeature() : setOpen(!open)} aria-label={open && !disabled ? "بستن چاره‌یار" : "گفت‌وگو با هوش مصنوعی"}><span className="ai-fab-mascot"><AiMascot /></span><span className="ai-fab-copy">چاره‌یار <small>پشتیبانی هوشمند</small></span>{open && !disabled && <Icon name="close" size={18} />}</button>
   </>;
 }
 
 export default function Dashboard() {
+  const showPendingFeature = usePendingFeature();
   const router = useRouter();
   const [view, setView] = useState<View>("home");
   useEffect(() => {
-    if (new URLSearchParams(window.location.search).get("view") !== "hall") return;
-    const timer = window.setTimeout(() => setView("hall"), 0);
+    const target = new URLSearchParams(window.location.search).get("view");
+    if (!["hall","support","reminder","market"].includes(target || "")) return;
+    const timer = window.setTimeout(() => setView(target as View), 0);
     return () => window.clearTimeout(timer);
   }, []);
 
@@ -733,6 +725,9 @@ export default function Dashboard() {
   }
 
   function openService(service: Service) {
+    if (!serviceAvailable(service)) { showPendingFeature(); return; }
+    if (service.id === "expert") { navigate("support"); return; }
+    if (service.id === "reminder") { navigate("reminder"); return; }
     setSelectedService(service);
     navigate("service");
   }
@@ -762,7 +757,8 @@ export default function Dashboard() {
     case "mycars": content = <MyCarsView onBack={() => navigate("home")} onToast={notify} />; break;
     case "addresses": content = <AddressesView onBack={() => navigate("home")} onToast={notify} />; break;
     case "invite": content = <InviteView onBack={() => navigate("home")} onToast={notify} />; break;
-    case "support": content = <SupportView onBack={() => navigate("home")} onToast={notify} />; break;
+    case "support": content = <SupportTickets onBack={() => navigate("home")} />; break;
+    case "reminder": content = <ServiceReminders onBack={() => navigate("home")} />; break;
     case "notifications": content = <NotificationsView onBack={() => navigate("home")} onToast={notify} />; break;
     case "service": content = <ServiceView service={selectedService} onBack={() => navigate("home")} onToast={notify} onRegister={(info) => { setLatestRequest(info.server); setRequest({ service: selectedService, ...info }); navigate("waiting"); }} />; break;
     case "waiting": content = request
@@ -778,7 +774,7 @@ export default function Dashboard() {
         <div className="app-header-inner">
           <div className="header-menu-wrap"><button className={`menu-button${drawerOpen ? " menu-button--active" : ""}`} type="button" onClick={() => setDrawerOpen(true)} aria-label="باز کردن منو"><span /><span /><span /></button><span className="menu-word">منو</span></div>
           <button className="header-brand-button" type="button" onClick={() => navigate("home")} aria-label="بازگشت به خانه"><BrandLogo compact /></button>
-          <div className="header-meta"><button className="header-profile-chip" type="button" onClick={() => navigate("profile")}><Avatar name={userName} /><span className="header-profile-text"><strong>{userName}</strong><small>کیف پول <b>{balance.toLocaleString("fa-IR")}</b></small></span></button><button className={`notification-button${view === "home" ? " home-feature-pending home-feature-pending--compact" : ""}`} disabled={view === "home"} aria-describedby={view === "home" ? "home-notifications-coming-soon" : undefined} type="button" onClick={() => navigate("notifications")} aria-label="اعلان‌ها"><Icon name="bell" size={20} />{view === "home" ? <ComingSoonTag id="home-notifications-coming-soon"/> : <i />}</button></div>
+          <div className="header-meta"><button className="header-profile-chip" type="button" onClick={() => navigate("profile")}><Avatar name={userName} /><span className="header-profile-text"><strong>{userName}</strong><small>کیف پول <b>{balance.toLocaleString("fa-IR")}</b></small></span></button><button className="notification-button" aria-haspopup={view === "home" ? "dialog" : undefined} type="button" onClick={() => view === "home" ? showPendingFeature() : navigate("notifications")} aria-label="اعلان‌ها"><Icon name="bell" size={20} />{view !== "home" && <i />}</button></div>
         </div>
       </header>
 

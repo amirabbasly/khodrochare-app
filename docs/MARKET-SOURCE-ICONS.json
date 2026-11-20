@@ -1,0 +1,32 @@
+[
+  {
+    "domain": "torob.com",
+    "path": "/market-sources/torob.png",
+    "source": "https://torob.com/static/icons/icon-57x57.png"
+  },
+  {
+    "domain": "yadakcar.com",
+    "path": "/market-sources/yadakcar.webp",
+    "source": "https://yadakcar.com/wp-content/uploads/2024/07/cropped-icon-min-32x32.jpg.webp"
+  },
+  {
+    "domain": "mryadaki.com",
+    "path": "/market-sources/mryadaki.ico",
+    "source": "https://mryadaki.com/favicon.ico"
+  },
+  {
+    "domain": "yadakpart.com",
+    "path": "/market-sources/yadakpart.webp",
+    "source": "https://yadakpart.com/wp-content/uploads/2026/07/LOGO-192-2.webp"
+  },
+  {
+    "domain": "etemadyadak.com",
+    "path": "/market-sources/etemadyadak.png",
+    "source": "https://etemadyadak.com/wp-content/uploads/2021/11/new-favicon-100x100.png"
+  },
+  {
+    "domain": "partsmall.ir",
+    "path": "/market-sources/partsmall.webp",
+    "source": "https://partsmall.ir/storage/img/favicon.webp"
+  }
+]

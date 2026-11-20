@@ -2,6 +2,7 @@
 "use client";
 import {useEffect,useState} from 'react';
 import {api,API_BASE_URL,errorMessage} from '@/lib/api';
+import {usePendingFeature} from '../PendingFeature';
 import {BrandLogo,Icon} from '../Icons';
 import {HallChat} from './HallChat';
 import {HallModal} from './HallModal';
@@ -9,9 +10,10 @@ import {HallLocationMap} from './HallLocationMap';
 import {type Listing,type Estimate,money,number} from './types';
 const imageUrl=(url:string)=>url.startsWith('/hall/')?API_BASE_URL+url:url;
 const dateLabel=(value?:string)=>value&&Number.isFinite(Date.parse(value))?new Date(value).toLocaleDateString('fa-IR'):'تاریخ ثبت نشده';
-function PendingRow({label,icon}:{label:string;icon:'shield'|'wallet'|'support'}){return <button className="ch-detail-module is-pending" type="button" disabled><Icon name={icon} size={20}/><span>{label}</span><small>به‌زودی</small><Icon name="chevron" size={16}/></button>;}
+function PendingRow({label,icon}:{label:string;icon:'shield'|'wallet'|'support'}){const showPendingFeature=usePendingFeature();return <button className="ch-detail-module" type="button" aria-haspopup="dialog" onClick={showPendingFeature}><Icon name={icon} size={20}/><span>{label}</span><Icon name="chevron" size={16}/></button>;}
 
 export function HallListingDetail({listing,onBack}:{listing:Listing;onBack:()=>void}){
+  const showPendingFeature=usePendingFeature();
   const [image,setImage]=useState(0),[chat,setChat]=useState(false),[priceOpen,setPriceOpen]=useState(false),[estimate,setEstimate]=useState<Estimate|null>(null),[busy,setBusy]=useState(false),[error,setError]=useState('');
   useEffect(()=>{void api(`/hall/listings/${listing.id}/view`,{method:'POST',auth:false,body:{}}).catch(()=>{});},[listing.id]);
   async function assess(){setPriceOpen(true);setBusy(true);setError('');try{const {make,model,trim,year,mileage,bodyCondition,technicalCondition,city}=listing;setEstimate(await api<Estimate>('/hall/estimate',{method:'POST',body:{make,model,trim,year,mileage,bodyCondition,technicalCondition,city}}));}catch(e){setError(errorMessage(e));}finally{setBusy(false);}}
@@ -25,8 +27,8 @@ export function HallListingDetail({listing,onBack}:{listing:Listing;onBack:()=>v
       <section className="ch-detail-modules" aria-label="خدمات تکمیلی آگهی"><PendingRow label="بررسی و کارشناسی" icon="shield"/><button className="ch-detail-module" type="button" onClick={()=>void assess()}><Icon name="tag" size={20}/><span>ارزیابی قیمت</span><Icon name="chevron" size={16}/></button><PendingRow label="خرید با تسهیلات" icon="wallet"/></section>
       <section className="ch-detail-description"><h2>توضیحات</h2><p>{listing.description||'توضیحی ثبت نشده است.'}</p></section><div className="ch-detail-categories"><span>خودرو سواری و وانت</span><span>خودرو در {listing.city}</span></div>
       <section className="ch-detail-location"><h2>موقعیت خودرو</h2>{listing.location?<><HallLocationMap readOnly value={listing.location}/><p>{listing.location.visibility==='AREA'?'موقعیت تقریبی خودرو در محدوده‌ای با شعاع ۲ کیلومتر نمایش داده می‌شود.':listing.location.address||'موقعیت دقیق اعلام‌شده فروشنده'}</p></>:<p className="ch-detail-hint">فروشنده هنوز موقعیت خودرو را ثبت نکرده است.</p>}</section>
-      <button className="ch-detail-module ch-report-pending" type="button" disabled><Icon name="support" size={20}/><span>گزارش آگهی</span><small>به‌زودی</small></button>
-      <footer className="ch-detail-footer"><BrandLogo compact/><div><button type="button" disabled>درباره خودرو چاره <small>به‌زودی</small></button><button type="button" disabled>قوانین آگهی‌ها <small>به‌زودی</small></button><a href="tel:02191855">پشتیبانی</a></div><div className="ch-detail-socials">{['اینستاگرام','تلگرام','لینکدین','ایکس'].map(name=><button type="button" disabled key={name} title="به‌زودی">{name}</button>)}</div></footer>
+      <button className="ch-detail-module ch-report-pending" type="button" aria-haspopup="dialog" onClick={showPendingFeature}><Icon name="support" size={20}/><span>گزارش آگهی</span></button>
+      <footer className="ch-detail-footer"><BrandLogo compact/><div><button type="button" aria-haspopup="dialog" onClick={showPendingFeature}>درباره خودرو چاره </button><button type="button" aria-haspopup="dialog" onClick={showPendingFeature}>قوانین آگهی‌ها </button><a href="tel:02191855">پشتیبانی</a></div><div className="ch-detail-socials">{['اینستاگرام','تلگرام','لینکدین','ایکس'].map(name=><button type="button" aria-haspopup="dialog" onClick={showPendingFeature} key={name}>{name}</button>)}</div></footer>
     </div>
     <div className="ch-detail-contact-bar" aria-label="ارتباط با فروشنده">{listing.contactPhone?<a className="ch-primary" href={`tel:${listing.contactPhone}`}><Icon name="phone" size={18}/><span>اطلاعات تماس <b dir="ltr">{listing.contactPhone}</b></span></a>:<button className="ch-primary" type="button" disabled>شماره تماس ثبت نشده</button>}<button className="ch-secondary" type="button" onClick={()=>setChat(true)}><Icon name="chat" size={19}/>چت با فروشنده</button></div>
     {chat&&<HallChat listingId={listing.id} onClose={()=>setChat(false)}/>}{priceOpen&&<HallModal title="ارزیابی قیمت خودرو" onClose={()=>setPriceOpen(false)}>{busy?<p role="status">در حال مقایسه آگهی‌های مشابه…</p>:error?<p className="ch-error" role="alert">{error}</p>:estimate?.sampleCount?<><p>{estimate.isEstimate?'تخمین با داده محدود':'مقایسه آگهی‌های مشابه'} · {number(estimate.sampleCount)} نمونه</p><dl className="ch-detail-rows">{[['کمترین قیمت',estimate.min],['میانه قیمت',estimate.median],['بیشترین قیمت',estimate.max]].map(([label,value])=><div key={String(label)}><dt>{label}</dt><dd>{money(value as number|null)}</dd></div>)}</dl><p>{estimate.criteria}</p><small>مبنای این ارزیابی، قیمت درخواستی آگهی‌هاست؛ قیمت معامله قطعی نیست.</small></>:<p>{estimate?.notice||'برای ارزیابی این خودرو هنوز داده کافی نداریم.'}</p>}</HallModal>}

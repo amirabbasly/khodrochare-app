@@ -1,6 +1,8 @@
 import type { Metadata, Viewport } from "next";
 import type { ReactNode } from "react";
 import { PwaBootstrap, SplashGate } from "@/components/AppExperience";
+import { AppZoomGuard } from "@/components/AppZoomGuard";
+import { PendingFeatureProvider } from "@/components/PendingFeature";
 import "./globals.css";
 
 export const metadata: Metadata = {
@@ -26,14 +28,18 @@ export const viewport: Viewport = {
   colorScheme: "light",
   width: "device-width",
   initialScale: 1,
+  minimumScale: 1,
+  maximumScale: 1,
+  userScalable: false,
 };
 
 export default function RootLayout({ children }: { children: ReactNode }) {
   return (
     <html lang="fa" dir="rtl">
       <body>
+        <AppZoomGuard />
         <PwaBootstrap />
-        <SplashGate>{children}</SplashGate>
+        <PendingFeatureProvider><SplashGate>{children}</SplashGate></PendingFeatureProvider>
       </body>
     </html>
   );
