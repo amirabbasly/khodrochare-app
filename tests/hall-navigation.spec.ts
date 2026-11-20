@@ -1,6 +1,17 @@
 import {test,expect,type Page} from '@playwright/test';
 import {mkdirSync,writeFileSync} from 'node:fs';
 import http from 'node:http';import path from 'node:path';import {createRequire} from 'node:module';
+// This integration fixture loads the backend's server at runtime. Keep its small
+// test-only contract local so frontend builds do not resolve backend node_modules.
+type TestSocket={
+ on(event:'hall:send',listener:(payload:{conversationId:string;clientId:string;body:string},ack:(value:unknown)=>void)=>void):void;
+ emit(event:'hall:message',message:unknown):void;
+};
+type TestSocketServer={
+ on(event:'connection',listener:(socket:TestSocket)=>void):void;
+ close(callback:()=>void):void;
+};
+type TestSocketModule={Server:new(server:http.Server,options:Record<string,unknown>)=>TestSocketServer};
 const api='https://api.khodrochare.ir/api/v1',url='http://localhost:3334',id='00000000-0000-4000-8000-000000000401',cid='00000000-0000-4000-8000-000000000402';
 function gate(){let resolve!:()=>void;const promise=new Promise<void>(r=>resolve=r);return{promise,resolve};}
 const listing=(i=1)=>({id:i===1?id:'00000000-0000-4000-8000-000000000403',status:'PUBLISHED',version:1,make:'Peugeot',model:i===1?'207':'206',trim:'Panorama',year:1403,mileage:25000,city:'Tehran',color:'White',description:'A maintained vehicle for UI regression checks.',bodyCondition:'سالم',technicalCondition:'سالم',inspectionStatus:'NOT_INSPECTED',priceToman:3500000000,viewCount:0,publishedAt:'2026-11-20T08:00:00Z',photos:[{id:'photo',url:'/hall-ux-photo.png'}],services:[],contactPhone:'09901234567',seller:{fullName:'Seller'}});
@@ -37,7 +48,7 @@ test('drawer opens a dedicated inbox and unavailable assistant never sends futil
  await setup(page);let posts=0;await page.route(api+'/assistant/config',r=>r.fulfill({json:{supportPhone:'02182801043',enabled:false}}));await page.route(api+'/assistant/chat',r=>{posts++;return r.fulfill({status:503,json:{error:'not configured'}});});await page.goto(url+'/home');await page.locator('.launch-splash').waitFor({state:'detached'});await page.locator('.ai-fab').click();await expect(page.getByRole('textbox',{name:'پیام شما'})).toBeDisabled();await expect(page.locator('.assistant-error')).toContainText('دستیار موقتاً در دسترس نیست');expect(posts).toBe(0);await page.keyboard.press('Escape');await page.getByRole('button',{name:'باز کردن منو'}).click();await page.getByRole('button',{name:'چت تالار خودرو',exact:true}).click();await expect(page).toHaveURL(url+'/hall/chat');await expect(page.locator('.hc-conversation')).toHaveCount(1);await expect(page.getByRole('dialog')).toHaveCount(0);
 });
 test('real Socket.IO transport sends one acknowledged message and displays an incoming reply once',async({page})=>{
- const backendRequire=createRequire(path.resolve('../khodrochare-backend/package.json'));const{Server}=backendRequire('socket.io') as typeof import('../../khodrochare-backend/node_modules/socket.io');const server=http.createServer(),io=new Server(server,{transports:['polling'],cors:{origin:true,credentials:true},pingInterval:1000,pingTimeout:5000});let received=0;
+ const backendRequire=createRequire(path.resolve('../khodrochare-backend/package.json'));const{Server}=backendRequire('socket.io') as TestSocketModule;const server=http.createServer(),io=new Server(server,{transports:['polling'],cors:{origin:true,credentials:true},pingInterval:1000,pingTimeout:5000});let received=0;
  io.on('connection',s=>{s.on('hall:send',(payload:{conversationId:string;clientId:string;body:string},ack:(value:unknown)=>void)=>{received++;const sent={...payload,id:'sent',senderId:'buyer',createdAt:new Date().toISOString()};ack({ok:true,data:sent});s.emit('hall:message',sent);s.emit('hall:message',{...message,id:'incoming',body:'Seller reply'});});});await new Promise<void>(r=>server.listen(0,'127.0.0.1',r));const address=server.address() as {port:number};
  try{await setup(page);await page.route('**/socket.io/**',async r=>{const original=new URL(r.request().url());try{const response=await r.fetch({url:`http://127.0.0.1:${address.port}${original.pathname}${original.search}`,timeout:10000});await r.fulfill({response});}catch{await r.abort().catch(()=>{});}});await page.goto(url+'/hall/chat?listing='+id);await page.locator('.launch-splash').waitFor({state:'detached'});await expect(page.locator('.hc-thread-header [role=status]')).toHaveText('متصل');await expect(page.getByRole('log')).toContainText(message.body);await page.getByLabel('پیام شما').fill('Buyer message');await page.getByRole('button',{name:'ارسال',exact:true}).click();await expect(page.getByRole('log')).toContainText('Seller reply');await expect(page.locator('.hc-bubble').filter({hasText:'Buyer message'})).toHaveCount(1);expect(received).toBe(1);await expect(page.getByLabel('پیام شما')).toHaveValue('');}finally{await new Promise<void>(r=>io.close(()=>r()));}
 });
