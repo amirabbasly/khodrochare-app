@@ -1,4 +1,4 @@
-const CACHE_NAME = "khodro-chare-shell-v7";
+const CACHE_NAME = "khodro-chare-shell-v9";
 const APP_SHELL = [
   "/",
   "/register",

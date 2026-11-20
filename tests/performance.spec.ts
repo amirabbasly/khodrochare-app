@@ -1,0 +1,20 @@
+import {test,expect} from '@playwright/test';
+import {mkdirSync,writeFileSync} from 'node:fs';
+const phase=process.env.PERFORMANCE_PHASE||'after';
+for(const driver of [false,true])for(const mobile of [false,true])test(`${driver?'driver':'customer'} wallet ${mobile?'mobile':'desktop'} preserves pixels and coalesces focus reads`,async({page,context})=>{
+ const cdp=await context.newCDPSession(page);await cdp.send('Performance.enable');
+ const user={id:'perf-owner',role:driver?'DRIVER':'CUSTOMER',fullName:'Performance User',phone:'09121234567',services:['REPAIR'],vehicles:[]};
+ await page.setViewportSize(mobile?{width:390,height:844}:{width:1280,height:900});await page.clock.setFixedTime(new Date('2026-11-20T08:00:00Z'));
+ await page.addInitScript(({user,driver})=>{localStorage.setItem(`khodrochare_${driver?'driver':'customer'}_session_v2`,JSON.stringify({token:'a'.repeat(64),expiresAt:'2099-01-01T00:00:00Z',user}));localStorage.setItem('khodrochare_location_choice_v2','dismissed');localStorage.setItem('khodrochare_readiness_v2','0');},{user,driver});
+ await page.route('**/socket.io/**',r=>r.abort());
+ let walletReads=0,held=false,release!:()=>void;const barrier=new Promise<void>(r=>release=r);
+ await page.route('https://api.khodrochare.ir/api/v1/**',async r=>{const path=new URL(r.request().url()).pathname;if(path.endsWith('/me'))return r.fulfill({json:user});if(path.endsWith('/wallet')){walletReads++;if(held)await barrier;return r.fulfill({json:{balanceToman:500000,sandboxBalanceToman:0,mode:'live',entries:[]}});}return r.fulfill({json:path.endsWith('/requests')||path.endsWith('/available')?[]:{totalToman:0,items:[],total:0}});});
+ const errors:string[]=[];page.on('pageerror',e=>errors.push(e.message));
+ await page.goto(`http://localhost:${driver?3335:3334}/home?view=wallet`);await page.locator('.launch-splash').waitFor({state:'detached'});await page.locator(driver?'.bottom-nav button':'.wallet-strip-cta').nth(driver?1:0).click();await expect(page.locator('.wallet-balance')).toContainText('\u06f5\u06f0\u06f0');await expect.poll(()=>walletReads).toBe(2);
+ await expect(page).toHaveScreenshot(`${driver?'driver':'customer'}-wallet-${mobile?'mobile':'desktop'}.png`,{animations:'disabled',maxDiffPixels:0});
+ held=true;await page.evaluate(()=>{for(let n=0;n<5;n++)window.dispatchEvent(new Event('focus'));});
+ await expect.poll(()=>walletReads).toBe(phase==='before'?12:4);release();if(phase!=='before')await expect.poll(()=>walletReads).toBe(6);
+ await expect(page.locator('.wallet-balance')).toContainText('\u06f5\u06f0\u06f0');expect(errors).toEqual([]);
+ const metrics=await cdp.send('Performance.getMetrics');const resources={browserMetrics:Object.fromEntries(metrics.metrics.filter(m=>['TaskDuration','ScriptDuration','JSHeapUsedSize'].includes(m.name)).map(m=>[m.name,m.value]))};
+ mkdirSync('performance-results',{recursive:true});writeFileSync(`performance-results/${phase}-${driver?'driver':'customer'}-${mobile?'mobile':'desktop'}.json`,JSON.stringify({phase,driver,mobile,walletReads,...resources},null,2));
+});

@@ -1,4 +1,5 @@
 "use client";
+import {AssistantChat} from "./AssistantChat";
 import {WalletPanel} from "./WalletPanel";
 import {useWallet} from "@/lib/use-wallet";
 
@@ -21,7 +22,7 @@ import { LocationTelemetry } from "@/components/LocationTelemetry";
 import { LocationPermissionModal } from "@/components/LocationPermissionModal";
 import { useRouter } from "next/navigation";
 import { BrandLogo, Icon } from "@/components/Icons";
-import { AiMascot, MiniCar } from "@/components/Artwork";
+import { MiniCar } from "@/components/Artwork";
 import { LocationPickerMap, UserPinMap } from "@/components/Maps";
 import { MoreDots3D, ServiceIllustration, type ServiceId } from "@/components/ServiceIllustration";
 
@@ -582,7 +583,7 @@ function WaitingView({
 }) {
   const [payOpen, setPayOpen] = useState(false);
   const [approving, setApproving] = useState(false);
-  const live = useLiveRequest(request.server.id);
+  const live = useLiveRequest(request.server.id, request.server);
   const current = live.request || request.server;
   const distance = live.tracking.distanceToOriginMeters;
   const distanceText = live.tracking.driver && distance !== undefined ? `${(distance / 1000).toLocaleString("fa-IR", { maximumFractionDigits: 1 })} کیلومتر` : "—";
@@ -658,19 +659,6 @@ function WaitingView({
   );
 }
 
-function AIChat({ open, setOpen, disabled=false }: { open: boolean; setOpen: (open: boolean) => void; disabled?: boolean }) {
-  const showPendingFeature = usePendingFeature();
-  const [text, setText] = useState("");
-  const [messages, setMessages] = useState([{ from: "bot", text: "سلام! من چاره‌یارم. برای چه چیزی دربارهٔ ماشینت کمکت کنم؟" }]);
-  function send(event: FormEvent<HTMLFormElement>) {
-    event.preventDefault(); if (!text.trim()) return;
-    const question = text.trim(); setMessages((items) => [...items, { from: "user", text: question }, { from: "bot", text: "حتماً! برای راهنمایی دقیق‌تر، از بخش خدمات یک گزینه انتخاب کن یا موضوعت را با کارشناس خودرو چاره در میان بگذار." }]); setText("");
-  }
-  return <>
-    {open && !disabled && <section className="chat-window" aria-label="گفت‌وگو با چاره‌یار"><div className="chat-header"><span className="chat-avatar"><span>AI</span></span><div><strong>چاره‌یار</strong><small><i />همراه هوشمند تو</small></div><button type="button" onClick={() => setOpen(false)} aria-label="بستن گفت‌وگو"><Icon name="close" size={19} /></button></div><div className="chat-messages">{messages.map((message, index) => <p key={`${message.from}-${index}`} className={`chat-bubble${message.from === "user" ? " chat-bubble--user" : ""}`}>{message.text}</p>)}</div><form className="chat-input-row" onSubmit={send}><input value={text} onChange={(event) => setText(event.target.value)} placeholder="پیامت را بنویس…" aria-label="پیام شما" /><button type="submit" aria-label="ارسال پیام"><Icon name="send" size={17} /></button></form><div className="chat-demo-note">همراه هوشمند خودرو چاره</div></section>}
-    <button className={`ai-fab${open && !disabled ? " ai-fab--open" : ""}`} aria-haspopup={disabled ? "dialog" : undefined} type="button" onClick={() => disabled ? showPendingFeature() : setOpen(!open)} aria-label={open && !disabled ? "بستن چاره‌یار" : "گفت‌وگو با هوش مصنوعی"}><span className="ai-fab-mascot"><AiMascot /></span><span className="ai-fab-copy">چاره‌یار <small>پشتیبانی هوشمند</small></span>{open && !disabled && <Icon name="close" size={18} />}</button>
-  </>;
-}
 
 export default function Dashboard() {
   const showPendingFeature = usePendingFeature();
@@ -788,7 +776,7 @@ export default function Dashboard() {
         <div className="drawer-content"><span className="drawer-section-label">خدمات و حساب من</span><nav className="drawer-nav">{drawerItems.map((item) => <button type="button" key={item.view} onClick={() => navigate(item.view)} className={view === item.view ? "is-current" : ""}><span className="drawer-nav-icon"><Icon name={item.icon} size={18} /></span><span>{item.label}</span><Icon name="chevron" size={15} className="drawer-arrow" /></button>)}</nav><button className="drawer-logout" type="button" onClick={logout}><span><Icon name="logout" size={18} /></span>خروج</button><div className="drawer-footer"><BrandLogo compact /><span>خودرو چاره · نسخه ۱.۰.۰</span></div></div>
       </aside>
 
-      <AIChat open={chatOpen} setOpen={setChatOpen} disabled={view === "home"} />
+      <AssistantChat open={chatOpen} setOpen={setChatOpen} />
       {toast && <div className="toast-message" role="status"><span><Icon name="check" size={17} /></span>{toast}<button type="button" onClick={() => setToast("")} aria-label="بستن پیام"><Icon name="close" size={15} /></button></div>}
     </div>
   );

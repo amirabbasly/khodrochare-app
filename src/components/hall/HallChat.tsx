@@ -1,6 +1,7 @@
 "use client";
 import {useEffect,useRef,useState} from 'react';
-import {api,errorMessage,getSession,openSocket} from '@/lib/api';
+import {api,errorMessage,openSocket} from '@/lib/api';
+import {useSessionState} from '@/lib/session';
 import {HallModal} from './HallModal';
 type Message={id:string;conversationId:string;senderId:string;clientId:string;body:string;createdAt:string};
 type Conversation={id:string;buyerId:string;sellerId:string;buyerReadAt:string;sellerReadAt:string;buyer?:{fullName:string};seller?:{fullName:string};listing:{make:string;model:string;status:string};messages?:Message[];unread?:number};
@@ -8,10 +9,11 @@ type Ack<T>={ok:boolean;data:T;error?:string};
 export function HallChat({listingId,onClose}:{listingId?:string;onClose:()=>void}){
   const [conversations,setConversations]=useState<Conversation[]>([]),[active,setActive]=useState<Conversation|null>(null),[messages,setMessages]=useState<Message[]>([]),[text,setText]=useState(''),[error,setError]=useState(''),[connected,setConnected]=useState(false),[loading,setLoading]=useState(true),[sending,setSending]=useState(false),[hasMore,setHasMore]=useState(false),[typing,setTyping]=useState(false),[inboxPage,setInboxPage]=useState(1);
   const socket=useRef<ReturnType<typeof openSocket>|null>(null),activeRef=useRef<Conversation|null>(null),end=useRef<HTMLDivElement>(null),retry=useRef<{clientId:string;body:string}|null>(null);
-  const user=getSession()?.user.id;
+  const {user:sessionUser}=useSessionState();
+  const user=sessionUser?.id;
   async function inbox(page=1){const r=await api<{items:Conversation[]}>(`/hall/conversations?page=${page}`);setConversations(old=>page===1?r.items:[...old,...r.items]);setInboxPage(page);}
-  async function history(row:Conversation,older=false){setLoading(true);setError('');try{const before=older?messages[0]?.id:undefined;const r=await api<{items:Message[];hasMore:boolean;conversation:Conversation}>(`/hall/conversations/${row.id}/messages${before?`?before=${before}`:''}`);if(activeRef.current?.id!==row.id)return;setMessages(old=>older?[...r.items,...old.filter(m=>!r.items.some(n=>n.id===m.id))]:[...r.items,...old.filter(m=>m.conversationId===row.id&&!r.items.some(n=>n.id===m.id))]);setActive(r.conversation);setHasMore(r.hasMore);if(document.visibilityState==='visible'&&r.items.length&&!older)socket.current?.emit('hall:read',{conversationId:row.id,messageId:r.items.at(-1)!.id});}catch(e){setError(errorMessage(e));}finally{setLoading(false);}}
-  async function choose(row:Conversation){activeRef.current=row;setActive(row);setMessages([]);setTyping(false);retry.current=null;setText('');await history(row);}
+  async function history(row:Conversation,older=false){setLoading(true);setError('');try{const before=older?messages[0]?.id:undefined;const r=await api<{items:Message[];hasMore:boolean;conversation:Conversation}>(`/hall/conversations/${row.id}/messages${before?`?before=${before}`:''}`);if(activeRef.current?.id!==row.id)return;setMessages(old=>older?[...r.items,...old.filter(m=>!r.items.some(n=>n.id===m.id))]:[...r.items,...old.filter(m=>m.conversationId===row.id&&!r.items.some(n=>n.id===m.id))]);activeRef.current=r.conversation;setActive(r.conversation);setHasMore(r.hasMore);if(document.visibilityState==='visible'&&r.items.length&&!older)socket.current?.emit('hall:read',{conversationId:row.id,messageId:r.items.at(-1)!.id});}catch(e){setError(errorMessage(e));}finally{setLoading(false);}}
+  async function choose(row:Conversation){activeRef.current=row;setActive(null);setMessages([]);setTyping(false);retry.current=null;setText('');await history(row);}
   useEffect(()=>{
     let alive=true,typingTimer:ReturnType<typeof setTimeout>;
     const s=openSocket();socket.current=s;
