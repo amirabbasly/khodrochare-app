@@ -32,6 +32,7 @@ type View =
   | "history"
   | "market"
   | "hall"
+  | "hallchat"
   | "profile"
   | "mycars"
   | "addresses"
@@ -63,11 +64,12 @@ const services: Service[] = [
   { id: "inspection", name: "کارشناسی خودرو", note: "خرید مطمئن‌تر", category: "خودرو" },
 ];
 
-const drawerItems: { label: string; view: View; icon: "wallet" | "history" | "market" | "auction" | "user" | "car" | "pin" | "gift" | "support" }[] = [
+const drawerItems: { label: string; view: View; icon: "wallet" | "history" | "market" | "auction" | "user" | "car" | "pin" | "gift" | "support" | "chat" }[] = [
   { label: "کیف پول", view: "wallet", icon: "wallet" },
   { label: "تاریخچه درخواست‌ها", view: "history", icon: "history" },
   { label: "جمعه‌بازار لوازم یدکی", view: "market", icon: "market" },
   { label: "تالار فروش خودرو", view: "hall", icon: "auction" },
+  { label: "چت تالار خودرو", view: "hallchat", icon: "chat" },
   { label: "حساب کاربری", view: "profile", icon: "user" },
   { label: "خودروهای من", view: "mycars", icon: "car" },
   { label: "آدرس‌های من", view: "addresses", icon: "pin" },
@@ -675,6 +677,7 @@ export default function Dashboard() {
   const [selectedService, setSelectedService] = useState<Service>(services[0]);
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [chatOpen, setChatOpen] = useState(false);
+  useEffect(()=>{if(drawerOpen)router.prefetch("/hall/chat");},[drawerOpen,router]);
   const [toast, setToast] = useState("");
   const wallet = useWallet();
   const balance = wallet.data?.balanceToman || 0;
@@ -705,6 +708,7 @@ export default function Dashboard() {
   }
 
   function navigate(next: View) {
+    if(next === "hallchat"){setDrawerOpen(false);router.push("/hall/chat");return;}
 
     setView(next);
     setDrawerOpen(false);
