@@ -141,7 +141,10 @@ export async function uploadDocument(file: File): Promise<DocumentRef> {
   return { id, token };
 }
 export async function logout() {
-  try { await api("/auth/logout", { method: "POST" }); } finally { clearSession(); }
+  try { await api("/auth/logout", { method: "POST" }); } finally {
+    clearSession();
+    window.dispatchEvent(new Event("khodrochare:unauthorized"));
+  }
 }
 export const errorMessage = (error: unknown) => error instanceof Error ? error.message : "عملیات انجام نشد؛ دوباره تلاش کنید.";
 export const requestStatus = (s: AssistanceRequest["status"]) => ({ PENDING: "در انتظار امدادگر", ACCEPTED: "امدادگر در مسیر شماست", ARRIVED: "امدادگر به مبدأ رسیده است", COMPLETED: "درخواست انجام شد", CANCELLED: "درخواست لغو شد" })[s];

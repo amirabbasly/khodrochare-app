@@ -3,6 +3,7 @@ import {test, expect, type Page} from '@playwright/test';
 const url = `http://localhost:${Number(process.env.HALL_E2E_PORT || 3320)}`;
 
 async function open(page: Page) {
+  await page.route('https://api.khodrochare.ir/api/v1/me', route => route.fulfill({status:401,json:{error:'Authentication required'}}));
   await page.goto(url + '/register');
   await page.locator('.launch-splash').waitFor({state: 'detached'});
 }

@@ -19,7 +19,9 @@ export function HallLocationMap({value,onPick,readOnly=false}:{value?:HallLocati
       const marker=L.marker(point,{draggable:!readOnly,icon:L.divIcon({className:'ch-map-pin',html:'<span></span>',iconSize:[30,40],iconAnchor:[15,40]}),title:readOnly?'موقعیت خودرو':'موقعیت انتخاب‌شده؛ برای جابه‌جایی بکشید'}).addTo(m);layers.current.push(marker);marker.on('dragend',()=>{const p=marker.getLatLng();callback.current?.(p.lat,p.lng);});
     }
   }
-  useEffect(()=>{current.current=value;draw(value);},[value,readOnly]); // eslint-disable-line react-hooks/exhaustive-deps
+  useEffect(()=>{current.current=value;},[value]);
+  // Reverse-geocoding adds an address without changing the point; retain manual map zoom.
+  useEffect(()=>{draw(current.current);},[value?.latitude,value?.longitude,value?.visibility,readOnly]); // eslint-disable-line react-hooks/exhaustive-deps
   useEffect(()=>{
     let disposed=false;const observer=new ResizeObserver(()=>map.current?.invalidateSize());
     void import('leaflet').then(({default:L})=>{if(disposed||!container.current)return;leafletModule.current=L;const m=L.map(container.current,{center:[35.6892,51.389],zoom:12,scrollWheelZoom:false,zoomControl:!readOnly,dragging:!readOnly,doubleClickZoom:!readOnly,touchZoom:!readOnly});map.current=m;L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png',{maxZoom:19,attribution:'&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'}).addTo(m);if(!readOnly)m.on('click',e=>callback.current?.(e.latlng.lat,e.latlng.lng));draw(current.current);observer.observe(container.current);setReady(true);}).catch(()=>{if(!disposed)setError('نقشه بارگذاری نشد؛ اتصال را بررسی کنید.');});

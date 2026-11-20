@@ -3,8 +3,9 @@
 import Image from "next/image";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useEffect, useState, type FormEvent } from "react";
-import { api, type User, login, register, saveSession, normalizePhone, latinDigits, validNationalId, errorMessage } from "@/lib/api";
+import { useState, type FormEvent } from "react";
+import { login, register, saveSession, normalizePhone, latinDigits, validNationalId, errorMessage } from "@/lib/api";
+import { useSessionState } from "@/lib/session";
 import { BrandLogo, Icon } from "@/components/Icons";
 
 function AuthVisual() {
@@ -91,11 +92,7 @@ function Field({
 
 export function LoginScreen() {
   const router = useRouter();
-  useEffect(() => {
-    const controller = new AbortController();
-    api<User>("/me", { signal: controller.signal }).then(() => { if (!controller.signal.aborted) router.replace("/home"); }).catch(() => {});
-    return () => controller.abort();
-  }, [router]);
+  const {authenticate} = useSessionState();
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
   const [passwordVisible, setPasswordVisible] = useState(false);
@@ -111,6 +108,7 @@ export function LoginScreen() {
     try {
       const session = await login(username, password, remember);
       saveSession(session, remember);
+      authenticate(session.user);
       router.replace("/home");
     } catch (error) { setError(errorMessage(error)); }
     finally { setBusy(false); }
@@ -148,11 +146,7 @@ export function LoginScreen() {
 
 export function RegisterScreen() {
   const router = useRouter();
-  useEffect(() => {
-    const controller = new AbortController();
-    api<User>("/me", { signal: controller.signal }).then(() => { if (!controller.signal.aborted) router.replace("/home"); }).catch(() => {});
-    return () => controller.abort();
-  }, [router]);
+  const {authenticate} = useSessionState();
   const [name, setName] = useState("");
   const [phone, setPhone] = useState("");
   const [password, setPassword] = useState("");
@@ -170,6 +164,7 @@ export function RegisterScreen() {
     try {
       const session = await register({ fullName: name.trim(), phone: normalizePhone(phone), password, nationalId: latinDigits(nationalCode) });
       saveSession(session, true);
+      authenticate(session.user);
       router.replace("/home");
     } catch (error) { setError(errorMessage(error)); }
     finally { setBusy(false); }
