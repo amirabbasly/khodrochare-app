@@ -290,8 +290,8 @@ function HomeView({
           <div className="bento-main-copy">
             <span className="bento-main-label"><i className="live-dot" /> وضعیت آخرین خدمت - امداد خودرو</span>
             <strong>{latestRequest ? requestStatus(latestRequest.status) : "هنوز درخواستی ثبت نشده"}</strong>
-            <span className="bento-progress" role="progressbar" aria-valuenow={latestRequest ? ({ PENDING: 20, ACCEPTED: 50, ARRIVED: 75, COMPLETED: 100, CANCELLED: 0 })[latestRequest.status] : 0} aria-valuemin={0} aria-valuemax={100} aria-label="پیشرفت آخرین خدمت">
-              <span className="bento-progress-fill" style={{ width: `${latestRequest ? ({ PENDING: 20, ACCEPTED: 50, ARRIVED: 75, COMPLETED: 100, CANCELLED: 0 })[latestRequest.status] : 0}%` }} />
+            <span className="bento-progress" role="progressbar" aria-valuenow={latestRequest ? ({ PENDING: 20, ACCEPTED: 50, ARRIVED: 75, COMPLETED: 100, CANCELLED: 0, EXPIRED: 0 })[latestRequest.status] : 0} aria-valuemin={0} aria-valuemax={100} aria-label="پیشرفت آخرین خدمت">
+              <span className="bento-progress-fill" style={{ width: `${latestRequest ? ({ PENDING: 20, ACCEPTED: 50, ARRIVED: 75, COMPLETED: 100, CANCELLED: 0, EXPIRED: 0 })[latestRequest.status] : 0}%` }} />
             </span>
             <span className="bento-main-meta">{latestRequest ? new Date(latestRequest.createdAt).toLocaleString("fa-IR", { timeZone: "Asia/Tehran" }) : "جزئیات درخواست‌های شما پس از ثبت نمایش داده می‌شود"}</span>
           </div>
@@ -354,7 +354,7 @@ function HistoryView({ onBack, onOpen }: { onBack: () => void; onOpen: (request:
     api<AssistanceRequest[]>("/requests", { signal: controller.signal }).then(setRequests).catch(() => {});
     return () => controller.abort();
   }, []);
-  const rows = requests.map(request => ({ title: request.vehicleName, date: new Date(request.createdAt).toLocaleString("fa-IR", { timeZone: "Asia/Tehran" }), status: request.status === "COMPLETED" ? "انجام‌شده" : request.status === "CANCELLED" ? "لغوشده" : "در انتظار", kind: request.service === "TOWING" ? "حمل خودرو" : "تعمیر در محل", icon: (request.service === "TOWING" ? "transport" : "roadside") as ServiceId, id: request.id }));
+  const rows = requests.map(request => ({ title: request.vehicleName, date: new Date(request.createdAt).toLocaleString("fa-IR", { timeZone: "Asia/Tehran" }), status: request.status === "COMPLETED" ? "انجام‌شده" : request.status === "CANCELLED" ? "لغوشده" : request.status === "EXPIRED" ? "منقضی‌شده" : "در انتظار", kind: request.service === "TOWING" ? "حمل خودرو" : "تعمیر در محل", icon: (request.service === "TOWING" ? "transport" : "roadside") as ServiceId, id: request.id }));
   const filteredRows = filter === "همه" ? rows : rows.filter((row) => row.status === filter);
   return <div className="subpage"><PageTitle title="تاریخچهٔ درخواست‌ها" subtitle="همهٔ سرویس‌ها و پیگیری‌های تو اینجاست." onBack={onBack} /><div className="filter-tabs">{["همه", "در انتظار", "انجام‌شده"].map((item) => <button type="button" key={item} className={filter === item ? "is-active" : ""} onClick={() => setFilter(item)}>{item}</button>)}</div><section className="panel-card history-list">{filteredRows.map((row) => <article className="history-row" key={row.id}><ServiceIllustration type={row.icon} size="sm" /><div className="history-details"><span>{row.kind}</span><strong>{row.title}</strong><small><Icon name="calendar" size={13} />{row.date}</small></div><span className={`status-pill${row.status === "انجام‌شده" ? " status-pill--done" : ""}`}><i />{row.status}</span><button className="row-more" type="button" aria-label="گزینه‌ها" disabled={row.status === "لغوشده"} onClick={() => { const request = requests.find(item => item.id === row.id); if (request) onOpen(request); }}><Icon name="more" size={20} /></button></article>)}</section><div className="history-note"><Icon name="sparkles" size={18} /><span>با ثبت درخواست جدید، جزئیات آن همین‌جا نمایش داده می‌شود.</span></div></div>;
 }
@@ -595,7 +595,7 @@ function WaitingView({
       <div className="page-title-row waiting-title-row">
         <div className="page-title-main">
           <button className="back-button" type="button" onClick={onBack} aria-label="بازگشت"><Icon name="arrow-right" size={19} /></button>
-          <div><h1>در حال اعزام امدادگر</h1><p>{request.service.name} · {request.car}</p></div>
+          <div><h1>{current.status === "EXPIRED" ? "درخواست منقضی شد" : "در حال اعزام امدادگر"}</h1><p>{request.service.name} · {request.car}</p></div>
         </div>
       </div>
 
@@ -650,12 +650,12 @@ function WaitingView({
 
         {current.service === "REPAIR" && current.partsQuoteToman != null && current.partsApprovedToman == null && <section className="parts-quote-panel"><p>پیشنهاد هزینه قطعات: {current.partsQuoteToman.toLocaleString("fa-IR")} تومان؛ مبلغ خدمت و قطعات پس از تأیید شما برای پرداخت آماده می‌شود.</p><button className="primary-button" type="button" disabled={approving} onClick={async () => { setApproving(true); try { await api(`/requests/${current.id}/parts-quote/approve`, { method: "POST", body: { version: current.partsQuoteVersion } }); onToast("هزینه قطعات تأیید شد."); } catch (error) { onToast(errorMessage(error)); } finally { setApproving(false); } }}>تأیید هزینه قطعات</button></section>}
         {payOpen && <PaymentDialog requestId={current.id} onClose={() => setPayOpen(false)} />}
-        <button type="button" className="pay-button" onClick={() => setPayOpen(true)}>
+        <button type="button" className="pay-button" disabled={current.status === "EXPIRED"} onClick={() => setPayOpen(true)}>
           <Icon name="wallet" size={16} /> پرداخت
         </button>
 
         <TrustWarning />
-        {["COMPLETED", "CANCELLED"].includes(current.status) ? <button type="button" className="waiting-cancel" onClick={onBack}>بازگشت به خانه</button> : <button type="button" className="waiting-cancel" onClick={onCancel}>انصراف از درخواست</button>}
+        {["COMPLETED", "CANCELLED", "EXPIRED"].includes(current.status) ? <button type="button" className="waiting-cancel" onClick={onBack}>بازگشت به خانه</button> : <button type="button" className="waiting-cancel" onClick={onCancel}>انصراف از درخواست</button>}
       </section>
     </div>
   );
