@@ -3,9 +3,12 @@
 import Image from "next/image";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useState, type FormEvent } from "react";
-import { login, register, saveSession, normalizePhone, latinDigits, validNationalId, errorMessage } from "@/lib/api";
+import { useEffect, useRef, useState, type FormEvent } from "react";
+import { login, saveSession, clearSession, updateSessionUser, normalizePhone, latinDigits, validNationalId, errorMessage } from "@/lib/api";
 import { useSessionState } from "@/lib/session";
+import {requestOtp,verifyOtp,resetPassword,completeProfile,type OtpChallenge,type OtpPurpose,safeReturnPath} from "@/lib/customer-auth";
+import {useSearchParams} from "next/navigation";
+import "./customer-auth.css";
 import { BrandLogo, Icon } from "@/components/Icons";
 
 function AuthVisual() {
@@ -44,6 +47,7 @@ function Field({
   onToggle,
   visible = false,
   pattern,
+  autoFocus = false,
 }: {
   label: string;
   name: string;
@@ -60,6 +64,7 @@ function Field({
   onToggle?: () => void;
   visible?: boolean;
   pattern?: string;
+  autoFocus?: boolean;
 }) {
   return (
     <label className="form-field" htmlFor={name}>
@@ -72,6 +77,7 @@ function Field({
           value={value}
           onChange={(event) => onChange(event.target.value)}
           placeholder={placeholder}
+          autoFocus={autoFocus}
           autoComplete={autoComplete}
           inputMode={inputMode}
           minLength={minLength}
@@ -91,108 +97,43 @@ function Field({
 }
 
 export function LoginScreen() {
-  const router = useRouter();
-  const {authenticate} = useSessionState();
-  const [username, setUsername] = useState("");
-  const [password, setPassword] = useState("");
-  const [passwordVisible, setPasswordVisible] = useState(false);
-  const [remember, setRemember] = useState(true);
-  const [error, setError] = useState("");
-  const [notice, setNotice] = useState("");
-
-  const [busy, setBusy] = useState(false);
-  async function handleSubmit(event: FormEvent<HTMLFormElement>) {
-    event.preventDefault();
-    if (busy) return;
-    setError(""); setNotice(""); setBusy(true);
-    try {
-      const session = await login(username, password, remember);
-      saveSession(session, remember);
-      authenticate(session.user);
-      router.replace("/home");
-    } catch (error) { setError(errorMessage(error)); }
-    finally { setBusy(false); }
-  }
-
-  return (
-    <main className="auth-page" dir="rtl">
-      <div className="auth-layout">
-        <section className="auth-form-panel" aria-labelledby="login-heading">
-          <div className="auth-mobile-brand"><BrandLogo /></div>
-          <div className="auth-heading">
-            <span className="auth-kicker auth-kicker--light">خودرو چاره، همیشه کنارته</span>
-            <h1 id="login-heading">خوش برگشتی</h1>
-            <p>برای ادامه، وارد حساب کاربری‌ات شو.</p>
-          </div>
-          <form className="auth-form" onSubmit={handleSubmit}>
-            <Field label="شماره تماس" name="username" value={username} onChange={setUsername} placeholder="۰۹۱۲۳۴۵۶۷۸۹" autoComplete="username" inputMode="tel" minLength={3} maxLength={32} ltr />
-            <Field label="رمز عبور" name="password" type="password" value={password} onChange={setPassword} placeholder="رمز عبورت را وارد کن" autoComplete="current-password" minLength={6} showToggle visible={passwordVisible} onToggle={() => setPasswordVisible((current) => !current)} />
-            <div className="form-options">
-              <label className="check-label"><input type="checkbox" checked={remember} onChange={(event) => setRemember(event.target.checked)} /><span className="custom-check"><Icon name="check" size={12} /></span><span>مرا به خاطر بسپار</span></label>
-              <button type="button" className="auth-inline-link" onClick={() => setNotice("ورود با کد یک بار مصرف به‌زودی فعال می‌شود.")}>ورود با کد یک بار مصرف</button>
-            </div>
-            {error && <p className="form-error" role="alert">{error}</p>}
-            {notice && <p className="form-notice" role="status">{notice}</p>}
-            <button className="primary-button auth-submit" type="submit" disabled={busy} aria-busy={busy}>ورود به حساب <Icon name="arrow-left" size={18} /></button>
-          </form>
-          <p className="auth-switch">حساب کاربری نداری؟ <Link href="/register">ثبت‌نام کن</Link></p>
-          <p className="auth-legal">با ورود، <a href="#terms">قوانین و مقررات خودرو چاره</a> را می‌پذیری.</p>
-        </section>
-        <AuthVisual />
-      </div>
-    </main>
-  );
+  const router=useRouter(),{authenticate}=useSessionState();
+  const [phone,setPhone]=useState(""),[password,setPassword]=useState(""),[visible,setVisible]=useState(false),[remember,setRemember]=useState(true),[busy,setBusy]=useState(false),[error,setError]=useState("");
+  async function submit(event:FormEvent){event.preventDefault();if(busy)return;setBusy(true);setError("");try{const session=await login(phone,password,remember);saveSession(session,remember);authenticate(session.user);router.replace("/home");}catch(e){setError(errorMessage(e));}finally{setBusy(false);}}
+  return <main className="auth-page" dir="rtl"><div className="auth-layout"><section className="auth-form-panel" aria-labelledby="login-heading"><div className="auth-mobile-brand"><BrandLogo/></div><div className="auth-heading"><span className="auth-kicker auth-kicker--light">خودرو چاره، همیشه کنارته</span><h1 id="login-heading">خوش برگشتی</h1><p>با شماره همراه و رمز عبور وارد حساب کاربری‌ات شو.</p></div><form className="auth-form" onSubmit={submit}>
+    <Field label="شماره تماس" name="username" type="tel" value={phone} onChange={setPhone} placeholder="۰۹۱۲۳۴۵۶۷۸۹" autoComplete="username" inputMode="tel" minLength={10} maxLength={16} ltr/>
+    <Field label="رمز عبور" name="password" type="password" value={password} onChange={setPassword} placeholder="رمز عبورت را وارد کن" autoComplete="current-password" minLength={6} showToggle visible={visible} onToggle={()=>setVisible(v=>!v)}/>
+    <div className="form-options"><label className="check-label"><input type="checkbox" checked={remember} onChange={e=>setRemember(e.target.checked)}/><span className="custom-check"><Icon name="check" size={12}/></span><span>مرا به خاطر بسپار</span></label><Link className="auth-inline-link" href="/forgot-password">فراموشی رمز عبور</Link></div>
+    {error&&<p className="form-error" role="alert">{error}</p>}<button className="primary-button auth-submit" type="submit" disabled={busy} aria-busy={busy}>{busy?'در حال ورود…':'ورود به حساب'}<Icon name="arrow-left" size={18}/></button>
+    </form><div className="otp-login-section"><span>بدون رمز عبور وارد شو</span><Link className="otp-login-link" href="/login-otp">ورود با کد یک بار مصرف <Icon name="phone" size={17}/></Link></div><p className="auth-switch">حساب کاربری نداری؟ <Link href="/register">ثبت‌نام کن</Link></p><p className="auth-legal">با ورود، قوانین و مقررات خودرو چاره را می‌پذیری.</p></section><AuthVisual/></div></main>;
 }
 
-export function RegisterScreen() {
-  const router = useRouter();
-  const {authenticate} = useSessionState();
-  const [name, setName] = useState("");
-  const [phone, setPhone] = useState("");
-  const [password, setPassword] = useState("");
-  const [passwordVisible, setPasswordVisible] = useState(false);
-  const [nationalCode, setNationalCode] = useState("");
-  const [error, setError] = useState("");
+function OtpScreen({mode}:{mode:'register'|'login'|'reset'}){
+ const router=useRouter(),{authenticate}=useSessionState();
+ const [phone,setPhone]=useState(""),[code,setCode]=useState(""),[password,setPassword]=useState(""),[confirm,setConfirm]=useState(""),[visible,setVisible]=useState(false),[remember,setRemember]=useState(true),[challenge,setChallenge]=useState<OtpChallenge|null>(null),[busy,setBusy]=useState(false),[error,setError]=useState(""),[done,setDone]=useState(false),[retryAt,setRetryAt]=useState(0),[tick,setTick]=useState(0);
+ const submitting=useRef(false);
+ const title=mode==='register'?'ثبت‌نام با شماره همراه':mode==='login'?'ورود با کد تأیید':'فراموشی رمز عبور';
+ const purpose:OtpPurpose=mode==='register'?'REGISTER':mode==='login'?'LOGIN':'RESET_PASSWORD';
+ useEffect(()=>{if(!challenge||done)return;const timer=window.setInterval(()=>setTick(Date.now()),1000);return()=>window.clearInterval(timer);},[challenge,done]);
+ const seconds=Math.max(0,Math.ceil((retryAt-tick)/1000));
+ async function send(){if(submitting.current)return;const normalized=normalizePhone(phone);if(!/^09\d{9}$/.test(normalized)){setError('شماره همراه معتبر وارد کنید.');return;}submitting.current=true;setBusy(true);setError('');try{const result=await requestOtp(normalized,purpose);setPhone(normalized);setChallenge(result);setCode('');const now=Date.now();setTick(now);setRetryAt(now+result.retryAfterSeconds*1000);}catch(e){setError(errorMessage(e));}finally{submitting.current=false;setBusy(false);}}
+ async function submit(event:FormEvent){event.preventDefault();if(!challenge){await send();return;}if(submitting.current)return;if(mode==='reset'&&password!==confirm){setError('رمز عبور و تکرار آن یکسان نیستند.');return;}submitting.current=true;setBusy(true);setError('');try{if(mode==='reset'){await resetPassword(challenge.challengeId,latinDigits(code),password);clearSession();window.dispatchEvent(new Event('khodrochare:unauthorized'));setPassword('');setConfirm('');setCode('');setDone(true);}else{const session=await verifyOtp(challenge.challengeId,latinDigits(code),remember);saveSession(session,remember);authenticate(session.user);router.replace('/home');}}catch(e){setError(errorMessage(e));}finally{submitting.current=false;setBusy(false);}}
+ return <main className="auth-page" dir="rtl"><div className="auth-layout"><section className="auth-form-panel" aria-labelledby="otp-heading"><div className="auth-mobile-brand"><BrandLogo/></div><div className="auth-heading"><span className="auth-kicker auth-kicker--light">ورود امن به خودرو چاره</span><h1 id="otp-heading">{title}</h1><p>{done?'رمز عبور جدید ذخیره شد. با رمز جدید وارد حساب شوید.':challenge?`کد پیامک‌شده به ${phone} را وارد کنید.`:mode==='register'?'فقط شماره همراهت را وارد کن؛ مشخصات را هنگام استفاده از خدمات تکمیل می‌کنی.':'شماره همراه حساب خود را وارد کنید.'}</p></div>
+ {done?<><p className="form-notice" role="status">رمز عبور با موفقیت تغییر کرد.</p><Link className="primary-button auth-submit" href="/">ورود با رمز عبور</Link></>:<form className="auth-form" onSubmit={submit}>
+  {!challenge?<Field label="شماره تماس" name="otp-phone" type="tel" value={phone} onChange={setPhone} placeholder="۰۹۱۲۳۴۵۶۷۸۹" autoComplete="tel" inputMode="tel" minLength={10} maxLength={16} ltr/>:<><div className="otp-phone-summary"><span dir="ltr">{phone}</span><button className="auth-inline-link" type="button" disabled={busy} onClick={()=>{setChallenge(null);setCode('');setError('');}}>ویرایش شماره</button></div><Field label="کد تأیید" name="otp-code" value={code} onChange={v=>setCode(latinDigits(v).replace(/\D/g,'').slice(0,6))} placeholder="کد ۶ رقمی" inputMode="numeric" autoComplete="one-time-code" minLength={6} maxLength={6} pattern="[0-9]{6}" autoFocus ltr/>
+  {mode==='reset'&&<><Field label="رمز عبور جدید" name="reset-password" type="password" value={password} onChange={setPassword} placeholder="حداقل ۸ کاراکتر" autoComplete="new-password" minLength={8} maxLength={128} showToggle visible={visible} onToggle={()=>setVisible(v=>!v)}/><Field label="تکرار رمز عبور جدید" name="confirm-password" type="password" value={confirm} onChange={setConfirm} placeholder="رمز جدید را دوباره وارد کنید" autoComplete="new-password" minLength={8} maxLength={128} showToggle visible={visible} onToggle={()=>setVisible(v=>!v)}/></>}
+  <p className="otp-help">کد تأیید ۵ دقیقه اعتبار دارد. آن را در اختیار دیگران نگذارید.</p><button className="auth-inline-link otp-resend" type="button" disabled={busy||seconds>0} onClick={()=>void send()}>ارسال دوباره کد{seconds>0?` (${seconds.toLocaleString('fa-IR')} ثانیه)`:''}</button></>}
+  {mode==='login'&&<label className="check-label"><input type="checkbox" checked={remember} onChange={e=>setRemember(e.target.checked)}/><span>مرا به خاطر بسپار</span></label>}{error&&<p className="form-error" role="alert">{error}</p>}<button className="primary-button auth-submit" type="submit" disabled={busy} aria-busy={busy}>{busy?'در حال بررسی…':!challenge?'دریافت کد تأیید':mode==='reset'?'تغییر رمز عبور':'تأیید و ورود'}<Icon name="arrow-left" size={18}/></button></form>}
+ <p className="auth-switch"><Link href="/">بازگشت به ورود با رمز عبور</Link>{mode==='login'&&<> · <Link href="/register">ثبت‌نام با شماره همراه</Link></>}</p></section><AuthVisual/></div></main>;
+}
+export function RegisterScreen(){return <OtpScreen mode="register"/>;}
+export function OtpLoginScreen(){return <OtpScreen mode="login"/>;}
+export function ForgotPasswordScreen(){return <OtpScreen mode="reset"/>;}
 
-  const [busy, setBusy] = useState(false);
-  async function handleSubmit(event: FormEvent<HTMLFormElement>) {
-    event.preventDefault();
-    if (busy) return;
-    setError("");
-    if (!validNationalId(nationalCode)) { setError("کد ملی معتبر ۱۰ رقمی وارد کنید."); return; }
-    setBusy(true);
-    try {
-      const session = await register({ fullName: name.trim(), phone: normalizePhone(phone), password, nationalId: latinDigits(nationalCode) });
-      saveSession(session, true);
-      authenticate(session.user);
-      router.replace("/home");
-    } catch (error) { setError(errorMessage(error)); }
-    finally { setBusy(false); }
-  }
-
-  return (
-    <main className="auth-page" dir="rtl">
-      <div className="auth-layout auth-layout--register">
-        <section className="auth-form-panel auth-form-panel--register" aria-labelledby="register-heading">
-          <div className="auth-mobile-brand"><BrandLogo /></div>
-          <div className="auth-heading">
-            <span className="auth-kicker auth-kicker--light">شروع یک تجربهٔ بهتر</span>
-            <h1 id="register-heading">حساب بساز، <span>راه بیفت!</span></h1>
-            <p>با یک حساب ساده، همهٔ خدمات خودرو چاره در دسترس توست.</p>
-          </div>
-          <form className="auth-form" onSubmit={handleSubmit}>
-            <Field label="نام و نام خانوادگی" name="full-name" value={name} onChange={setName} placeholder="مثلاً آرمان رضایی" autoComplete="name" minLength={3} maxLength={50} />
-            <Field label="شماره تماس" name="phone" type="tel" value={phone} onChange={setPhone} placeholder="۰۹۱۲۳۴۵۶۷۸۹" autoComplete="tel" inputMode="tel" minLength={10} maxLength={16} ltr />
-            <Field label="کد ملی" name="national-code" value={nationalCode} onChange={setNationalCode} placeholder="۱۰ رقم کد ملی" inputMode="numeric" minLength={10} maxLength={10} ltr />
-            <Field label="رمز عبور" name="new-password" type="password" value={password} onChange={setPassword} placeholder="حداقل ۸ کاراکتر" autoComplete="new-password" minLength={8} showToggle visible={passwordVisible} onToggle={() => setPasswordVisible((current) => !current)} />
-            {error && <p className="form-error" role="alert">{error}</p>}
-            <button className="primary-button auth-submit" type="submit" disabled={busy} aria-busy={busy}>ساخت حساب کاربری <Icon name="arrow-left" size={18} /></button>
-          </form>
-          <p className="auth-switch">قبلاً حساب ساخته‌ای؟ <Link href="/">وارد شو</Link></p>
-          <p className="auth-legal">با ساخت حساب، قوانین و حریم خصوصی خودرو چاره را می‌پذیری.</p>
-        </section>
-        <AuthVisual />
-      </div>
-    </main>
-  );
+export function CompleteProfileScreen(){
+ const router=useRouter(),params=useSearchParams(),{user,authenticate}=useSessionState(),next=safeReturnPath(params.get('next'));
+ const [name,setName]=useState(user?.nationalId?user.fullName:''),[nationalId,setNationalId]=useState(user?.nationalId||''),[password,setPassword]=useState(''),[visible,setVisible]=useState(false),[busy,setBusy]=useState(false),[error,setError]=useState('');
+ const needsPassword=user?.hasPassword===false;
+ async function submit(event:FormEvent){event.preventDefault();if(busy)return;setError('');const normalized=latinDigits(nationalId);if(!validNationalId(normalized)){setError('کد ملی معتبر ۱۰ رقمی وارد کنید.');return;}setBusy(true);try{const updated=await completeProfile({fullName:name.trim(),nationalId:normalized,...(needsPassword?{password}:{})});updateSessionUser(updated);authenticate(updated);router.replace(next);}catch(e){setError(errorMessage(e));}finally{setBusy(false);}}
+ return <main className="auth-page" dir="rtl"><div className="auth-layout"><section className="auth-form-panel" aria-labelledby="complete-profile-heading"><div className="auth-mobile-brand"><BrandLogo/></div><div className="auth-heading"><span className="auth-kicker auth-kicker--light">تکمیل مشخصات حساب</span><h1 id="complete-profile-heading">یک قدم تا استفاده از خدمات</h1><p>شماره همراه شما تأیید شده است. برای استفاده از این بخش، مشخصات هویتی حساب را تکمیل کنید.</p></div><div className="otp-phone-summary"><span>شماره تأییدشده</span><strong dir="ltr">{user?.phone}</strong></div><form className="auth-form" onSubmit={submit}><Field label="نام و نام خانوادگی" name="complete-name" value={name} onChange={setName} placeholder="نام و نام خانوادگی" autoComplete="name" minLength={3} maxLength={150}/><Field label="کد ملی" name="complete-national-id" value={nationalId} onChange={v=>setNationalId(latinDigits(v).replace(/\D/g,'').slice(0,10))} placeholder="۱۰ رقم کد ملی" inputMode="numeric" minLength={10} maxLength={10} ltr/>{needsPassword&&<Field label="رمز عبور" name="complete-password" type="password" value={password} onChange={setPassword} placeholder="حداقل ۸ کاراکتر" autoComplete="new-password" minLength={8} maxLength={128} showToggle visible={visible} onToggle={()=>setVisible(v=>!v)}/>}{error&&<p className="form-error" role="alert">{error}</p>}<button className="primary-button auth-submit" type="submit" disabled={busy} aria-busy={busy}>{busy?'در حال ذخیره…':'تکمیل مشخصات و ادامه'}<Icon name="arrow-left" size={18}/></button></form><p className="auth-switch"><Link href="/home">فعلاً بازگشت به صفحه اصلی</Link></p></section><AuthVisual/></div></main>;
 }

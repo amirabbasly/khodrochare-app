@@ -4,6 +4,7 @@ import { PwaBootstrap, SplashGate } from "@/components/AppExperience";
 import { AppZoomGuard } from "@/components/AppZoomGuard";
 import { PendingFeatureProvider } from "@/components/PendingFeature";
 import { SessionProvider } from "@/lib/session";
+import { CustomerProfileListener } from "@/lib/customer-auth";
 import "./globals.css";
 
 export const metadata: Metadata = {
@@ -41,7 +42,7 @@ export default function RootLayout({ children }: { children: ReactNode }) {
       <body>
         <AppZoomGuard />
         <PwaBootstrap />
-        <SessionProvider><PendingFeatureProvider><SplashGate>{children}</SplashGate></PendingFeatureProvider></SessionProvider>
+        <SessionProvider><PendingFeatureProvider><CustomerProfileListener/><SplashGate>{children}</SplashGate></PendingFeatureProvider></SessionProvider>
       </body>
     </html>
   );

@@ -9,7 +9,7 @@ export type VehicleModel = { id: string; name: string; groupId: string; group: {
 export type Payment = { gatewayMode?:"sandbox"|"live";id:string;status:"AWAITING_TRANSFER"|"SUBMITTED"|"VERIFIED"|"REJECTED"|"AWAITING_PAYMENT"|"GATEWAY_PENDING"|"SANDBOX_VERIFIED"|"REFUND_REQUIRED";serviceToman:number;partsToman:number;amountToman:number;commissionPercent:number;commissionToman:number;driverShareToman:number };
 export type ServiceCode = "REPAIR" | "TOWING" | "MOBILE_CARWASH" | "PERIODIC_SERVICE" | "INSPECTION";
 export type Vehicle = { id: string; name: string; plate: string };
-export type User = { id: string; role: "CUSTOMER" | "DRIVER"; fullName: string; phone: string; nationalId: string; vehiclePlate?: string; vehicleType?: string; services: ServiceCode[]; identityDocumentId?: string; vehicles?: Vehicle[] };
+export type User = { id: string; role: "CUSTOMER" | "DRIVER"; fullName: string; phone: string; nationalId: string | null; profileComplete?: boolean; hasPassword?: boolean; vehiclePlate?: string; vehicleType?: string; services: ServiceCode[]; identityDocumentId?: string; vehicles?: Vehicle[] };
 export type Session = { token: string; expiresAt: string; user: User };
 export type PricingBreakdown = { service: ServiceCode; baseToman: number | null; perKmToman?: number | null; distanceChargeToman?: number | null; surchargePercent?: number; totalToman: number | null; requiresAgreement: boolean; partsPricing?: string; vehicleGroup?: string; transportKind?: string };
 export type AssistanceRequest = { driverCommissionConfirmedAt?: string | null; operationsStartedAt?: string | null; payment?: { status: Payment["status"] } | null; id: string; customerId: string; driverId: string | null; service: ServiceCode; status: "PENDING" | "ACCEPTED" | "ARRIVED" | "COMPLETED" | "CANCELLED" | "EXPIRED"; vehicleName: string; vehiclePlate: string; originAddress?: string | null; destinationAddress?: string | null; partsQuoteToman?: number | null; partsQuoteVersion?: number; partsApprovedToman?: number | null; problem: string | null; originLat: number; originLng: number; destinationLat: number | null; destinationLng: number | null; distanceMeters: number | null; distanceMethod: string | null; priceToman: number | null; pricingBreakdown?: PricingBreakdown | null; createdAt: string; updatedAt: string };
@@ -114,7 +114,8 @@ export async function api<T>(route: string, options: { method?: string; body?: u
         clearSession();
         window.dispatchEvent(new Event("khodrochare:unauthorized"));
       }
-      throw new ApiError(serverMessage(response.status, data || {}), response.status, data?.error);
+      if (response.status === 403 && data?.code === 'PROFILE_INCOMPLETE') window.dispatchEvent(new Event('khodrochare:profile-required'));
+      throw new ApiError(serverMessage(response.status, data || {}), response.status, data?.code || data?.error);
     }
     if (auth && response.ok) {
       const expiresAt = response.headers.get("X-Session-Expires-At");
@@ -130,9 +131,6 @@ export async function api<T>(route: string, options: { method?: string; body?: u
 }
 export function login(phone: string, password: string, remember = true) {
   return api<Session>(`/auth/${APP_ROLE === "CUSTOMER" ? "customers" : "drivers"}/login`, { method: "POST", auth: false, body: { phone: normalizePhone(phone), password, remember } });
-}
-export function register(body: unknown) {
-  return api<Session>(`/auth/${APP_ROLE === "CUSTOMER" ? "customers" : "drivers"}/register`, { method: "POST", auth: false, body });
 }
 export async function uploadDocument(file: File): Promise<DocumentRef> {
   if (!["image/jpeg", "image/png"].includes(file.type) || file.size > 5 * 1024 * 1024) throw new ApiError("مدرک باید تصویر JPG یا PNG با حجم حداکثر ۵ مگابایت باشد.", 400);

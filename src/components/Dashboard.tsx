@@ -1,4 +1,5 @@
 "use client";
+import {useCustomerProfileGate} from "@/lib/customer-auth";
 import {AssistantChat} from "./AssistantChat";
 import {WalletPanel} from "./WalletPanel";
 import {useWallet} from "@/lib/use-wallet";
@@ -665,16 +666,22 @@ function WaitingView({
 export default function Dashboard() {
   const showPendingFeature = usePendingFeature();
   const router = useRouter();
+  const ensureProfile = useCustomerProfileGate();
+  const [selectedService, setSelectedService] = useState<Service>(services[0]);
   const [view, setView] = useState<View>("home");
   useEffect(() => {
-    const target = new URLSearchParams(window.location.search).get("view");
-    if (!["hall","support","reminder","market"].includes(target || "")) return;
-    const timer = window.setTimeout(() => setView(target as View), 0);
+    const params = new URLSearchParams(window.location.search), target = params.get("view");
+    if (!["hall","support","reminder","market","wallet","profile","mycars","service","history","addresses"].includes(target || "")) return;
+    if (!ensureProfile('/home'+window.location.search)) return;
+    const timer = window.setTimeout(() => {
+      if(target==='service'){const service=services.find(row=>row.id===params.get('service'));if(!service||!serviceAvailable(service))return;setSelectedService(service);}
+      setView(target as View);
+    }, 0);
     return () => window.clearTimeout(timer);
-  }, []);
+  }, [ensureProfile]);
 
   
-  const [selectedService, setSelectedService] = useState<Service>(services[0]);
+
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [chatOpen, setChatOpen] = useState(false);
   useEffect(()=>{if(drawerOpen)router.prefetch("/hall/chat");},[drawerOpen,router]);
@@ -708,6 +715,7 @@ export default function Dashboard() {
   }
 
   function navigate(next: View) {
+    if(next!=="home"&&!ensureProfile(next==='hallchat'?'/hall/chat':'/home?view='+next)){setDrawerOpen(false);return;}
     if(next === "hallchat"){setDrawerOpen(false);router.push("/hall/chat");return;}
 
     setView(next);
@@ -720,6 +728,7 @@ export default function Dashboard() {
     if (!serviceAvailable(service)) { showPendingFeature(); return; }
     if (service.id === "expert") { navigate("support"); return; }
     if (service.id === "reminder") { navigate("reminder"); return; }
+    if(!ensureProfile('/home?view=service&service='+service.id))return;
     setSelectedService(service);
     navigate("service");
   }
@@ -780,7 +789,7 @@ export default function Dashboard() {
         <div className="drawer-content"><span className="drawer-section-label">خدمات و حساب من</span><nav className="drawer-nav">{drawerItems.map((item) => <button type="button" key={item.view} onClick={() => navigate(item.view)} className={view === item.view ? "is-current" : ""}><span className="drawer-nav-icon"><Icon name={item.icon} size={18} /></span><span>{item.label}</span><Icon name="chevron" size={15} className="drawer-arrow" /></button>)}</nav><button className="drawer-logout" type="button" onClick={logout}><span><Icon name="logout" size={18} /></span>خروج</button><div className="drawer-footer"><BrandLogo compact /><span>خودرو چاره · نسخه ۱.۰.۰</span></div></div>
       </aside>
 
-      <AssistantChat open={chatOpen} setOpen={setChatOpen} />
+      <AssistantChat open={chatOpen} setOpen={open=>{if(open&&!ensureProfile("/home"))return;setChatOpen(open);}} />
       {toast && <div className="toast-message" role="status"><span><Icon name="check" size={17} /></span>{toast}<button type="button" onClick={() => setToast("")} aria-label="بستن پیام"><Icon name="close" size={15} /></button></div>}
     </div>
   );

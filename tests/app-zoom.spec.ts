@@ -30,9 +30,9 @@ test('page zoom shortcuts and trackpad pinch are blocked while typing and ordina
   expect(await page.evaluate(() => ({width: innerWidth, ratio: devicePixelRatio}))).toEqual(original);
   await page.keyboard.press('Control+-');
   expect(await page.evaluate(() => ({width: innerWidth, ratio: devicePixelRatio}))).toEqual(original);
-  const name = page.getByRole('textbox', {name: 'نام و نام خانوادگی'});
-  await name.fill('کاربر تست');
-  await expect(name).toHaveValue('کاربر تست');
+  const name = page.getByRole('textbox', {name: 'شماره تماس'});
+  await name.fill('09121234567');
+  await expect(name).toHaveValue('09121234567');
 });
 
 test.describe('touch page scale', () => {
@@ -45,7 +45,7 @@ test.describe('touch page scale', () => {
     expect(meta).toContain('minimum-scale=1');
     expect(meta).toContain('user-scalable=no');
     await expect(page.locator('body')).toHaveCSS('touch-action', 'pan-x pan-y');
-    const input = page.getByRole('textbox', {name: 'نام و نام خانوادگی'});
+    const input = page.getByRole('textbox', {name: 'شماره تماس'});
     expect(await input.evaluate(el => parseFloat(getComputedStyle(el).fontSize))).toBeGreaterThanOrEqual(16);
     await input.tap();
     await expect(input).toBeFocused();
@@ -62,10 +62,10 @@ test.describe('touch page scale', () => {
     await page.touchscreen.tap(195,150);
     expect(await page.evaluate(() => visualViewport?.scale)).toBe(1);
     // Swipe on the page margin rather than synthesizing a wheel gesture over an input.
-    await page.setViewportSize({width:390,height:640});
+    await page.setViewportSize({width:390,height:400});
     await page.evaluate(() => window.scrollTo(0,0));
-    await cdp.send('Input.dispatchTouchEvent', {type:'touchStart',touchPoints:[{x:385,y:580}]});
-    for (const y of [530,480,430,380,330]) {
+    await cdp.send('Input.dispatchTouchEvent', {type:'touchStart',touchPoints:[{x:385,y:380}]});
+    for (const y of [330,280,230,180,130]) {
       await cdp.send('Input.dispatchTouchEvent', {type:'touchMove',touchPoints:[{x:385,y}]});
       await page.evaluate(() => new Promise<void>(resolve => requestAnimationFrame(() => resolve())));
     }

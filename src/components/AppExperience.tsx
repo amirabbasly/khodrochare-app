@@ -11,17 +11,19 @@ export function SplashGate({ children }: { children: ReactNode }) {
   const [visible, setVisible] = useState(true);
   const [minimumElapsed, setMinimumElapsed] = useState(false);
   const [typedMessage, setTypedMessage] = useState("");
-  const {status,error,retry} = useSessionState();
+  const {status,error,retry,user} = useSessionState();
   const pathname = usePathname(), router = useRouter();
-  const authPage = pathname === "/" || pathname === "/register";
-  const redirecting = status === "authenticated" && authPage || status === "anonymous" && (pathname === "/home" || pathname === "/hall/chat");
+  const authPage = pathname === "/" || pathname === "/register" || pathname === "/login-otp";
+  const profileRedirect = status === 'authenticated' && user?.profileComplete === false && pathname === '/hall/chat';
+  const redirecting = status === "authenticated" && authPage || status === "anonymous" && (pathname === "/home" || pathname === "/hall/chat" || pathname === '/complete-profile') || profileRedirect;
   const holding = status === "checking" || status === "error" || redirecting;
   const leaving = visible && minimumElapsed && !holding;
 
   useEffect(() => {
-    if (status === "authenticated" && (pathname === "/" || pathname === "/register")) router.replace("/home");
-    else if (status === "anonymous" && (pathname === "/home" || pathname === "/hall/chat")) router.replace("/");
-  }, [pathname,status,router]);
+    if (status === "authenticated" && authPage) router.replace("/home");
+    else if (status === "anonymous" && (pathname === "/home" || pathname === "/hall/chat" || pathname === '/complete-profile')) router.replace("/");
+    else if (profileRedirect) router.replace('/complete-profile?next='+encodeURIComponent('/hall/chat'+window.location.search));
+  }, [pathname,status,router,authPage,profileRedirect]);
 
   useEffect(() => {
     if (!visible || !minimumElapsed || holding) return;
