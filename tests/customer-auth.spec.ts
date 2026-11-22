@@ -24,3 +24,17 @@ test('OTP login uses temporary session when remember is disabled',async({page})=
  await setup(page);await page.route(base+'/auth/customers/otp/verify',r=>{expect(r.request().postDataJSON()).toMatchObject({remember:false,code:'864209'});return r.fulfill({json:{user:{...user,profileComplete:true,hasPassword:true,nationalId:'1234567891'},token:'c'.repeat(64),expiresAt:new Date(Date.now()+86400000).toISOString()}});});
  await phone(page,'/login-otp');await page.getByLabel('مرا به خاطر بسپار',{exact:true}).uncheck();await page.getByLabel('کد تأیید',{exact:true}).fill('864209');await page.getByRole('button',{name:'تأیید و ورود',exact:true}).click();await expect(page).toHaveURL(/\/home$/);expect(await page.evaluate(()=>localStorage.getItem('khodrochare_customer_session_v2'))).toBeNull();expect(await page.evaluate(()=>sessionStorage.getItem('khodrochare_customer_session_v2'))).not.toBeNull();
 });
+
+for(const width of [390,1440])test(`account deletion with OTP at ${width}px`,async({page})=>{
+ await page.setViewportSize({width,height:900});await setup(page,true);
+ await page.addInitScript(()=>localStorage.setItem('khodrochare_hall_otp-owner_draft','private draft'));
+ await page.route(base+'/me/account-deletion/otp',r=>{expect(r.request().postDataJSON()).toEqual({});return r.fulfill({json:{challengeId:'delete-challenge',expiresInSeconds:300,retryAfterSeconds:60}});});
+ let deleted=false,attempts=0;
+ await page.route(base+'/me',r=>{if(r.request().method()==='DELETE'){attempts++;expect(r.request().postDataJSON()).toEqual({challengeId:'delete-challenge',code:'864209',confirmation:'DELETE'});if(attempts===1)return r.fulfill({status:400,json:{error:'کد تأیید نادرست است'}});deleted=true;return r.fulfill({json:{deleted:true}});}return r.fulfill({status:deleted?401:200,json:deleted?{error:'Authentication required'}:user});});
+ await page.goto('/home?view=profile');await page.locator('.launch-splash').waitFor({state:'detached'});
+ await page.getByRole('button',{name:'حذف حساب کاربری',exact:true}).click();const dialog=page.getByRole('dialog',{name:'حذف حساب کاربری',exact:true});await expect(dialog).toBeVisible();
+ await dialog.getByRole('button',{name:'دریافت کد حذف حساب',exact:true}).click();await expect(dialog.getByRole('button',{name:/ارسال مجدد کد/})).toBeDisabled();await expect(dialog.getByRole('button',{name:'حذف دائمی حساب',exact:true})).toBeDisabled();
+ await dialog.getByLabel('کد تأیید حذف حساب',{exact:true}).fill('۸۶۴۲۰۹');await dialog.getByLabel('پیامدهای حذف دائمی حساب را می‌پذیرم.').check();await page.screenshot({path:`performance-results/customer-auth/delete-${width}.png`});
+ await dialog.getByRole('button',{name:'حذف دائمی حساب',exact:true}).click();await expect(dialog.locator('[role=alert]')).toContainText('کد تأیید نادرست است');await dialog.getByRole('button',{name:'حذف دائمی حساب',exact:true}).click();await expect(page).toHaveURL('/');await expect(page.locator('#login-heading')).toBeVisible();
+ expect(await page.evaluate(()=>localStorage.getItem('khodrochare_customer_session_v2'))).toBeNull();expect(await page.evaluate(()=>localStorage.getItem('khodrochare_hall_otp-owner_draft'))).toBeNull();
+});

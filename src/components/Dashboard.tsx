@@ -672,7 +672,7 @@ export default function Dashboard() {
   useEffect(() => {
     const params = new URLSearchParams(window.location.search), target = params.get("view");
     if (!["hall","support","reminder","market","wallet","profile","mycars","service","history","addresses"].includes(target || "")) return;
-    if (!ensureProfile('/home'+window.location.search)) return;
+    if (target!=='profile'&&!ensureProfile('/home'+window.location.search)) return;
     const timer = window.setTimeout(() => {
       if(target==='service'){const service=services.find(row=>row.id===params.get('service'));if(!service||!serviceAvailable(service))return;setSelectedService(service);}
       setView(target as View);
@@ -715,7 +715,7 @@ export default function Dashboard() {
   }
 
   function navigate(next: View) {
-    if(next!=="home"&&!ensureProfile(next==='hallchat'?'/hall/chat':'/home?view='+next)){setDrawerOpen(false);return;}
+    if(next!=="home"&&next!=="profile"&&!ensureProfile(next==='hallchat'?'/hall/chat':'/home?view='+next)){setDrawerOpen(false);return;}
     if(next === "hallchat"){setDrawerOpen(false);router.push("/hall/chat");return;}
 
     setView(next);
