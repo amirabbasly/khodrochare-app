@@ -1,6 +1,7 @@
 import type { Metadata, Viewport } from "next";
 import type { ReactNode } from "react";
 import { PwaBootstrap, SplashGate } from "@/components/AppExperience";
+import { IOSInstallationGate } from "@/components/IOSInstallationGate";
 import { AppZoomGuard } from "@/components/AppZoomGuard";
 import { PendingFeatureProvider } from "@/components/PendingFeature";
 import { SessionProvider } from "@/lib/session";
@@ -42,7 +43,7 @@ export default function RootLayout({ children }: { children: ReactNode }) {
       <body>
         <AppZoomGuard />
         <PwaBootstrap />
-        <SessionProvider><PendingFeatureProvider><CustomerProfileListener/><SplashGate>{children}</SplashGate></PendingFeatureProvider></SessionProvider>
+        <IOSInstallationGate><SessionProvider><PendingFeatureProvider><CustomerProfileListener/><SplashGate>{children}</SplashGate></PendingFeatureProvider></SessionProvider></IOSInstallationGate>
       </body>
     </html>
   );

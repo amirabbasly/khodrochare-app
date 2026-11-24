@@ -23,6 +23,8 @@ import { useCallback, useEffect, useState, type FormEvent, type ReactNode } from
 import { LocationTelemetry } from "@/components/LocationTelemetry";
 import { LocationPermissionModal } from "@/components/LocationPermissionModal";
 import { useRouter } from "next/navigation";
+import {DiagnosticOffer} from "./DiagnosticOffer";
+import {MainServiceShortcuts} from "./MainServiceShortcuts";
 import { BrandLogo, Icon } from "@/components/Icons";
 import { MiniCar } from "@/components/Artwork";
 import { LocationPickerMap, UserPinMap } from "@/components/Maps";
@@ -43,12 +45,13 @@ type View =
   | "support"
   | "notifications"
   | "service"
-  | "waiting";
+  | "waiting"
+  | "diagnostic";
 
 type SubmittedRequest = { service: Service; car: string; problem: string; lat: number; lng: number; server: AssistanceRequest };
 type Service = { id: ServiceId; name: string; note: string; category: string };
 
-const serviceAvailable = (service: Service) => ["roadside","transport","expert","reminder","maintenance","carwash","inspection"].includes(service.id);
+const serviceAvailable = (service: Service) => ["roadside","transport","expert","reminder","maintenance","carwash","inspection","diagnostic"].includes(service.id);
 
 const serviceForCode = (code: string) => ({TOWING:"transport",REPAIR:"roadside",MOBILE_CARWASH:"carwash",PERIODIC_SERVICE:"maintenance",INSPECTION:"inspection"}[code] || "roadside");
 const onsiteCodes:Record<string,string>={maintenance:"PERIODIC_SERVICE",carwash:"MOBILE_CARWASH",inspection:"INSPECTION"};
@@ -58,7 +61,7 @@ const services: Service[] = [
   { id: "transport", name: "حمل خودرو", note: "امن و مطمئن", category: "امداد" },
   { id: "maintenance", name: "سرویس دوره‌ای خودرو", note: "سرویس و نگهداری", category: "سرویس" },
   { id: "carwash", name: "کارواش سیار", note: "در محل شما", category: "سرویس" },
-  { id: "diagnostic", name: "عیب‌یابی هوشمند", note: "دیاگ با موبایل", category: "هوشمند" },
+  { id: "diagnostic", name: "دیاگ سیار", note: "دیاگ، GPS و ریمپ", category: "هوشمند" },
   { id: "insurance", name: "خدمات بیمه", note: "بیمهٔ خودرو", category: "خودرو" },
   { id: "fines", name: "پرداخت جرائم", note: "استعلام و پرداخت", category: "خودرو" },
   { id: "tolls", name: "عوارض و خلافی خودرو", note: "پرداخت یک‌جا", category: "خودرو" },
@@ -326,6 +329,7 @@ function HomeView({
             </button>
           ))}
         </div>
+        <MainServiceShortcuts onImport={showPendingFeature} onSell={()=>onNavigate("hall")} onMarket={()=>onNavigate("market")}/>
       </section>
 
       <HeroSlider onService={onService} onExplore={() => document.getElementById("services")?.scrollIntoView({ behavior: "smooth" })} />
@@ -686,10 +690,10 @@ export default function Dashboard() {
   const [view, setView] = useState<View>("home");
   useEffect(() => {
     const params = new URLSearchParams(window.location.search), target = params.get("view");
-    if (!["hall","support","reminder","market","wallet","profile","mycars","service","history","addresses"].includes(target || "")) return;
-    if (target!=='profile'&&!ensureProfile('/home'+window.location.search)) return;
+    if (!["hall","support","reminder","market","wallet","profile","mycars","service","history","addresses","diagnostic"].includes(target || "")) return;
+    if (target!=='profile'&&target!=='diagnostic'&&!ensureProfile('/home'+window.location.search)) return;
     const timer = window.setTimeout(() => {
-      if(target==='service'){const service=services.find(row=>row.id===params.get('service'));if(!service||!serviceAvailable(service))return;setSelectedService(service);}
+      if(target==='service'){const service=services.find(row=>row.id===params.get('service'));if(!service||!serviceAvailable(service))return;if(service.id==='diagnostic'){setView('diagnostic');return;}setSelectedService(service);}
       setView(target as View);
     }, 0);
     return () => window.clearTimeout(timer);
@@ -730,7 +734,7 @@ export default function Dashboard() {
   }
 
   function navigate(next: View) {
-    if(next!=="home"&&next!=="profile"&&!ensureProfile(next==='hallchat'?'/hall/chat':'/home?view='+next)){setDrawerOpen(false);return;}
+    if(next!=="home"&&next!=="profile"&&next!=="diagnostic"&&!ensureProfile(next==='hallchat'?'/hall/chat':'/home?view='+next)){setDrawerOpen(false);return;}
     if(next === "hallchat"){setDrawerOpen(false);router.push("/hall/chat");return;}
 
     setView(next);
@@ -740,6 +744,7 @@ export default function Dashboard() {
   }
 
   function openService(service: Service) {
+    if(service.id==="diagnostic"){navigate("diagnostic");return;}
     if (!serviceAvailable(service)) { showPendingFeature(); return; }
     if (service.id === "expert") { navigate("support"); return; }
     if (service.id === "reminder") { navigate("reminder"); return; }
@@ -765,6 +770,7 @@ export default function Dashboard() {
   let content: ReactNode;
   switch (view) {
     case "home": content = <HomeView latestRequest={latestRequest} balance={balance} onService={openService} onNavigate={navigate} onToast={notify} />; break;
+    case "diagnostic": content = <DiagnosticOffer onBack={()=>navigate("home")}/>; break;
     case "wallet": content = <WalletPanel onBack={() => navigate("home")} />; break;
     case "history": content = <HistoryView onBack={() => navigate("home")} onOpen={server => { const service = services.find(item => item.id === serviceForCode(server.service))!; setRequest({ service, car: server.vehicleName, problem: server.problem || "", lat: server.originLat, lng: server.originLng, server }); navigate("waiting"); }} />; break;
     case "market": content = <MarketView onBack={() => navigate("home")} onToast={notify} />; break;
