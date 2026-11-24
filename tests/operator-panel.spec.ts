@@ -14,6 +14,7 @@ for(const variant of [{role:'admin',width:1440,height:1000},{role:'operator',wid
   const url=new URL(route.request().url()),p=url.pathname,body=route.request().postDataJSON();calls.push({p,body,method:route.request().method()});
   const send=(data:unknown)=>route.fulfill({status:200,contentType:'application/json',body:JSON.stringify(data)});
   if(p==='/api/auth/me')return send({user});
+  if(p.endsWith('/locations'))return send({requestId:request.id,customerName:customer.fullName,driverName:request.driver?.fullName||null,generatedAt:new Date().toISOString(),maxAgeSeconds:120,current:{origin:{latitude:request.originLat,longitude:request.originLng,recordedAt:request.createdAt,source:'REQUEST_ORIGIN'},customer:null,driver:null},snapshots:[]});
   if(p.endsWith('/confirm')){request.operatorConfirmedAt=new Date().toISOString();return send({request,guidance:'لطفاً با امدادخواه تماس بگیرید و بار را به یکی از بچه‌های امدادی بسپرید و پرداخت را به شکل آنلاین از طریق اپلیکیشن یا در محل پیگیری کنید.'});}
   if(p.endsWith('/assign')){request.driver=driver;request.driverId=driver.id;request.status='ACCEPTED';return send(request);}
   if(p.endsWith('/active')){customer.isActive=body.isActive;return send(customer);}
@@ -33,7 +34,7 @@ for(const variant of [{role:'admin',width:1440,height:1000},{role:'operator',wid
  await expect(dialog.getByText('هنوز تخصیص نیافته',{exact:true})).toBeVisible();
  await dialog.getByLabel('امدادگر فعال و ارائه‌دهندهٔ این خدمت').selectOption(driver.id);
  await dialog.getByRole('button',{name:'ثبت تخصیص و اطلاع‌رسانی به اپلیکیشن'}).click();await expect(dialog.getByText('امدادگر نمونه',{exact:true})).toBeVisible();
- await dialog.getByRole('button',{name:'بستن',exact:true}).click();await page.getByRole('tab',{name:'حساب‌های اپلیکیشن'}).click();await page.getByRole('button',{name:'مدیریت حساب و فعالیت'}).click();
+ await dialog.getByRole('button',{name:'بستن',exact:true}).click();await page.getByRole('tab',{name:'مشتریان اپلیکیشن'}).click();await page.getByRole('button',{name:'مدیریت حساب و فعالیت'}).click();
  await expect(dialog.getByRole('button',{name:/حذف حساب/})).toHaveCount(0);
  await dialog.getByLabel('علت تغییر وضعیت').fill('درخواست پشتیبانی');await dialog.getByRole('button',{name:'غیرفعال کردن حساب',exact:true}).click();await expect(dialog.getByRole('button',{name:'فعال کردن حساب',exact:true})).toBeVisible();
  await dialog.getByLabel('رمز جدید').fill('temporary-test-password');await dialog.getByRole('button',{name:'ثبت رمز جدید و خروج نشست‌های قبلی'}).click();await expect(dialog.getByLabel('رمز جدید')).toHaveValue('');
