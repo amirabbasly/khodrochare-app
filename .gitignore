@@ -52,3 +52,5 @@ next-env.d.ts
 /otp-*.log
 
 /service-update-test-results/
+
+/hall-photo-icon-results/

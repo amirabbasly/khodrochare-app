@@ -15,7 +15,7 @@ export type ServiceId =
   | "expert"
   | "inspection";
 
-export type ArtId = ServiceId | "wallet" | "oil";
+export type ArtId = ServiceId | "wallet" | "oil" | "car-import" | "parts-import" | "car-sale" | "friday-market";
 
 const shadow = <ellipse cx="32" cy="56" rx="17" ry="4.2" fill="#0F2233" opacity=".13" />;
 
@@ -28,6 +28,29 @@ const sparkle = (x: number, y: number, s: number, color = "#FFC188") => (
 );
 
 const drawings: Record<ArtId, ReactNode> = {
+  "car-import": <>
+    <defs><linearGradient id="g3d-import-car" x2="0" y2="1"><stop stopColor="#FFE2BC"/><stop offset="1" stopColor="#ED7929"/></linearGradient><linearGradient id="g3d-import-glass" x2="0" y2="1"><stop stopColor="#C5DEEE"/><stop offset="1" stopColor="#5F82A0"/></linearGradient><linearGradient id="g3d-import-container" x2="0" y2="1"><stop stopColor="#5A7B95"/><stop offset="1" stopColor="#253D51"/></linearGradient></defs>
+    {shadow}<path d="m7 37 25-6 25 6-7 15H16z" fill="url(#g3d-import-container)"/><path d="m7 37 25 6 25-6" stroke="#8DAAC0" strokeWidth="2"/><path d="M11 53q5-4 10 0t10 0 10 0 10 0" stroke="#90B7CB" strokeWidth="2.6"/>
+    <path d="m13 24 6-9h18l7 9 6 3v12H11V27z" fill="url(#g3d-import-car)"/><path d="m19 23 3-5h13l4 5z" fill="url(#g3d-import-glass)"/><path d="M29 18v5M14 29h9m14 0h10" stroke="#FFE8C7" strokeWidth="2"/><path d="m11 32 39 1v6H11z" fill="#D76A27" opacity=".4"/><circle cx="19" cy="38" r="4.5" fill="#26343F"/><circle cx="19" cy="38" r="2" fill="#E4ECF1"/><circle cx="43" cy="38" r="4.5" fill="#26343F"/><circle cx="43" cy="38" r="2" fill="#E4ECF1"/>
+    <g className="shortcut-import-arrow"><path d="M49 7v14m-5-5 5 5 5-5" stroke="#EF842F" strokeWidth="3.5"/><path d="M48 7v11" stroke="#FFD9AA" strokeWidth="1"/></g>{sparkle(9,17,3)}
+  </>,
+  "parts-import": <>
+    <defs><linearGradient id="g3d-parts-box" x2="0" y2="1"><stop stopColor="#FFD4A0"/><stop offset="1" stopColor="#ED852F"/></linearGradient><linearGradient id="g3d-parts-engine" x2="0" y2="1"><stop stopColor="#88A6BB"/><stop offset="1" stopColor="#29465B"/></linearGradient></defs>
+    {shadow}<path d="m10 32 22-10 22 10-22 11z" fill="#FFE2B8"/><path d="m10 32 22 11v15L10 47z" fill="url(#g3d-parts-box)"/><path d="m32 43 22-11v15L32 58z" fill="#D97329"/><path d="m32 43 8-4v15l-8 4" fill="#F7B75E"/>
+    <g className="shortcut-engine"><path d="M24 13h15v5h6v15H21V20h-5v-6h8z" fill="url(#g3d-parts-engine)"/><path d="m24 13 6-4h15v5l-6 4H24z" fill="#AFC5D4"/><path d="m39 18 6-4 5 4v13l-5 2V18z" fill="#20394D"/><circle cx="32" cy="25" r="6" fill="#E4EDF2"/><circle cx="32" cy="25" r="3" fill="#52768D"/><path d="M24 17h11M20 23v6" stroke="#C2D6E3" strokeWidth="1.5"/></g>
+    <path d="m10 32 22 11-9 6L2 37zm22 11 22-11 8 6-22 11" fill="#FFCE96"/>{sparkle(51,10,3)}<g className="shortcut-import-arrow"><path d="M9 8v13m-4-4 4 4 4-4" stroke="#ED842F" strokeWidth="3"/></g>
+  </>,
+  "car-sale": <>
+    <defs><linearGradient id="g3d-sale-car" x2="0" y2="1"><stop stopColor="#F6FAFC"/><stop offset="1" stopColor="#9CB4C5"/></linearGradient><linearGradient id="g3d-sale-glass" x2="0" y2="1"><stop stopColor="#A9D5EB"/><stop offset="1" stopColor="#476B84"/></linearGradient><linearGradient id="g3d-sale-tag" x2="0" y2="1"><stop stopColor="#FFC98F"/><stop offset="1" stopColor="#ED7929"/></linearGradient></defs>
+    {shadow}<path d="m10 32 8-13h23l10 13 5 4v14H7V36z" fill="url(#g3d-sale-car)"/><path d="m19 30 5-8h14l6 8z" fill="url(#g3d-sale-glass)"/><path d="M32 22v8" stroke="#D6E8F1" strokeWidth="2"/><path d="M9 38h10m24 0h10" stroke="#FFE4A5" strokeWidth="3"/><path d="M24 41h15" stroke="#4C6A80" strokeWidth="3"/><path d="M10 46h44" stroke="#DFE9EF" strokeWidth="2"/><circle cx="16" cy="50" r="5" fill="#26343F"/><circle cx="16" cy="50" r="2" fill="#E4ECF1"/><circle cx="47" cy="50" r="5" fill="#26343F"/><circle cx="47" cy="50" r="2" fill="#E4ECF1"/>
+    <g className="shortcut-sale-tag"><path d="M39 7h13l7 8-15 15-12-12z" fill="#C35F24" transform="translate(0 2)"/><path d="M39 7h13l7 8-15 15-12-12z" fill="url(#g3d-sale-tag)"/><circle cx="45" cy="13" r="2.3" fill="#FFF0D5"/><path d="m40 23 10-10" stroke="#FFF1DA" strokeWidth="2"/></g>{sparkle(10,14,3)}
+  </>,
+  "friday-market": <>
+    <defs><linearGradient id="g3d-friday-wall" x2="0" y2="1"><stop stopColor="#F6FAFC"/><stop offset="1" stopColor="#B8CDDA"/></linearGradient><linearGradient id="g3d-friday-awning" x2="0" y2="1"><stop stopColor="#FFC98F"/><stop offset="1" stopColor="#EE7B2E"/></linearGradient><linearGradient id="g3d-friday-side" x2="0" y2="1"><stop stopColor="#5A7B95"/><stop offset="1" stopColor="#253D51"/></linearGradient></defs>
+    {shadow}<path d="m12 23 35-4 8 7v29H12z" fill="url(#g3d-friday-wall)"/><path d="m47 19 8 7v29h-8z" fill="url(#g3d-friday-side)"/><path d="M17 34h13v21H17z" fill="#36566E"/><path d="M19 37h8v11h-8z" fill="#A4CFDF"/><circle cx="27" cy="49" r="1" fill="#FFE1AB"/><path d="M33 35h10v12H33z" fill="#6C92AA"/><path d="M35 37h6v8h-6z" fill="#CCE4EC"/>
+    <g className="shortcut-market-canopy"><path d="m13 13 33-3 9 8H8z" fill="#FFE2B7"/><path d="M8 18h47v10H8z" fill="url(#g3d-friday-awning)"/><path d="M17 18h8v10h-8zm16 0h8v10h-8z" fill="#FFF3DF"/><path d="M8 27c0 6 9 6 9 0 0 6 8 6 8 0 0 6 8 6 8 0 0 6 8 6 8 0 0 6 8 6 8 0 0 5 6 5 6 0" fill="#ED812D"/><path d="M17 27c0 6 8 6 8 0m8 0c0 6 8 6 8 0" fill="#FFF3DF"/></g>
+    <g transform="translate(44 45)"><circle r="7" fill="#2D4A60"/><circle r="4.6" fill="#9EB8CA"/><circle r="2.3" fill="#E8F2F7"/><path d="M0-9v3m0 12v3m-9-9h3m12 0h3" stroke="#2D4A60" strokeWidth="3"/></g>{sparkle(8,8,2.5)}
+  </>,
   /* ───────── امداد خودرو · جرثقیل امداد ───────── */
   roadside: (
     <>

@@ -2,3 +2,13 @@
 .main-service-shortcuts strong{white-space:nowrap}.main-service-shortcuts .shortcut-parts-label{font-size:12px}@media(max-width:600px){.main-service-shortcuts .shortcut-parts-label{font-size:clamp(8px,2.5vw,12px);letter-spacing:-.15px}}
 
 .main-service-shortcuts>.shortcut-parts{padding-inline:2px}
+.main-service-shortcuts .service-art3d{width:58px;height:58px}
+.main-service-shortcuts>button:hover .service-art3d,.main-service-shortcuts>a:hover .service-art3d{animation:icon3d-pop .55s cubic-bezier(.34,1.56,.64,1)}
+.shortcut-import-arrow{animation:shortcut-import-arrive 2.8s ease-in-out infinite;transform-box:fill-box;transform-origin:center}
+.shortcut-sale-tag{animation:shortcut-tag-swing 3.8s ease-in-out infinite;transform-box:fill-box;transform-origin:50% 10%}
+.shortcut-engine{animation:shortcut-engine-float 3.6s ease-in-out infinite}
+@keyframes shortcut-import-arrive{0%,100%{transform:translateY(-1px)}50%{transform:translateY(2px)}}
+@keyframes shortcut-tag-swing{0%,100%{transform:rotate(-4deg)}50%{transform:rotate(4deg)}}
+@keyframes shortcut-engine-float{0%,100%{transform:translateY(0)}50%{transform:translateY(-2px)}}
+@media(max-width:600px){.main-service-shortcuts .service-art3d{width:50px;height:50px}}
+@media(prefers-reduced-motion:reduce){.main-service-shortcuts .service-art3d,.main-service-shortcuts .service-art3d *{animation:none!important;transition:none!important}}
