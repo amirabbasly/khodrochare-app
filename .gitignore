@@ -50,3 +50,5 @@ next-env.d.ts
 
 /driver-expiry-results/
 /otp-*.log
+
+/service-update-test-results/
