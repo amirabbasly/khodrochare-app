@@ -20,3 +20,5 @@
 @media(max-width:640px){.ch-native-modal{padding:16px;border-radius:20px}.ch-chat-layout{grid-template-columns:minmax(0,1fr)}.ch-chat-inbox{flex-direction:row;max-height:130px}.ch-chat-inbox>button{flex-shrink:0;max-width:200px}.ch-chat-messages{height:32dvh}.ch-modal-heading h2{font-size:17px}}
 
 .ch-hall .ch-puzzle-piece{touch-action:none}.ch-plan.is-disabled>strong{font-size:17px}.ch-tabs{flex-wrap:wrap}.ch-native-modal .ch-filter-grid{padding-bottom:20px}
+
+.ch-discount-label{display:inline-block;margin-inline-start:8px;padding:3px 8px;border-radius:8px;background:#fff0e5;color:#b9480b;font-size:11px}.ch-optional-boosts del{color:#657680;font-size:12px}

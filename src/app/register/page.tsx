@@ -1,5 +1,2 @@
-import { RegisterScreen } from "@/components/AuthScreens";
-
-export default function RegisterPage() {
-  return <RegisterScreen />;
-}
+import { redirect } from "next/navigation";
+export default function Page() { redirect("/login-otp"); }

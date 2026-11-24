@@ -15,7 +15,7 @@ export function AccountDeletion({phone}:{phone:string}){
  function close(){if(submitting.current)return;setOpen(false);setCode('');setConfirmed(false);setError('');}
  async function send(){
   if(submitting.current)return;submitting.current=true;setBusy(true);setError('');
-  try{const next=await api<OtpChallenge>('/me/account-deletion/otp',{method:'POST',body:{},timeoutMs:25000});const now=Date.now();setChallenge(next);setCode('');setTick(now);setRetryAt(now+next.retryAfterSeconds*1000);}
+  try{const next=await api<OtpChallenge>('/me/account-deletion/otp',{method:'POST',body:{},timeoutMs:45000});const now=Date.now();setChallenge(next);setCode('');setTick(now);setRetryAt(now+next.retryAfterSeconds*1000);}
   catch(e){setError(errorMessage(e));}finally{submitting.current=false;setBusy(false);}
  }
  async function remove(event:FormEvent){

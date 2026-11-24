@@ -1,4 +1,5 @@
 "use client";
+import {OnsiteOptions,type OnsiteConfig} from './OnsiteOptions';
 import {useCustomerProfileGate} from "@/lib/customer-auth";
 import {AssistantChat} from "./AssistantChat";
 import {WalletPanel} from "./WalletPanel";
@@ -47,8 +48,11 @@ type View =
 type SubmittedRequest = { service: Service; car: string; problem: string; lat: number; lng: number; server: AssistanceRequest };
 type Service = { id: ServiceId; name: string; note: string; category: string };
 
-const serviceAvailable = (service: Service) => ["roadside","transport","expert","reminder"].includes(service.id);
+const serviceAvailable = (service: Service) => ["roadside","transport","expert","reminder","maintenance","carwash","inspection"].includes(service.id);
 
+const serviceForCode = (code: string) => ({TOWING:"transport",REPAIR:"roadside",MOBILE_CARWASH:"carwash",PERIODIC_SERVICE:"maintenance",INSPECTION:"inspection"}[code] || "roadside");
+const onsiteCodes:Record<string,string>={maintenance:"PERIODIC_SERVICE",carwash:"MOBILE_CARWASH",inspection:"INSPECTION"};
+const requestSlugs:Record<string,string>={transport:"towing",roadside:"repair",maintenance:"maintenance",carwash:"carwash",inspection:"inspection"};
 const services: Service[] = [
   { id: "roadside", name: "امداد خودرو", note: "همیشه در راه", category: "امداد" },
   { id: "transport", name: "حمل خودرو", note: "امن و مطمئن", category: "امداد" },
@@ -355,7 +359,7 @@ function HistoryView({ onBack, onOpen }: { onBack: () => void; onOpen: (request:
     api<AssistanceRequest[]>("/requests", { signal: controller.signal }).then(setRequests).catch(() => {});
     return () => controller.abort();
   }, []);
-  const rows = requests.map(request => ({ title: request.vehicleName, date: new Date(request.createdAt).toLocaleString("fa-IR", { timeZone: "Asia/Tehran" }), status: request.status === "COMPLETED" ? "انجام‌شده" : request.status === "CANCELLED" ? "لغوشده" : request.status === "EXPIRED" ? "منقضی‌شده" : "در انتظار", kind: request.service === "TOWING" ? "حمل خودرو" : "تعمیر در محل", icon: (request.service === "TOWING" ? "transport" : "roadside") as ServiceId, id: request.id }));
+  const rows = requests.map(request => ({ title: request.vehicleName, date: new Date(request.createdAt).toLocaleString("fa-IR", { timeZone: "Asia/Tehran" }), status: request.status === "COMPLETED" ? "انجام‌شده" : request.status === "CANCELLED" ? "لغوشده" : request.status === "EXPIRED" ? "منقضی‌شده" : "در انتظار", kind: services.find(item=>item.id===serviceForCode(request.service))?.name || "خدمات خودرو", icon: (request.service === "TOWING" ? "transport" : "roadside") as ServiceId, id: request.id }));
   const filteredRows = filter === "همه" ? rows : rows.filter((row) => row.status === filter);
   return <div className="subpage"><PageTitle title="تاریخچهٔ درخواست‌ها" subtitle="همهٔ سرویس‌ها و پیگیری‌های تو اینجاست." onBack={onBack} /><div className="filter-tabs">{["همه", "در انتظار", "انجام‌شده"].map((item) => <button type="button" key={item} className={filter === item ? "is-active" : ""} onClick={() => setFilter(item)}>{item}</button>)}</div><section className="panel-card history-list">{filteredRows.map((row) => <article className="history-row" key={row.id}><ServiceIllustration type={row.icon} size="sm" /><div className="history-details"><span>{row.kind}</span><strong>{row.title}</strong><small><Icon name="calendar" size={13} />{row.date}</small></div><span className={`status-pill${row.status === "انجام‌شده" ? " status-pill--done" : ""}`}><i />{row.status}</span><button className="row-more" type="button" aria-label="گزینه‌ها" disabled={row.status === "لغوشده"} onClick={() => { const request = requests.find(item => item.id === row.id); if (request) onOpen(request); }}><Icon name="more" size={20} /></button></article>)}</section><div className="history-note"><Icon name="sparkles" size={18} /><span>با ثبت درخواست جدید، جزئیات آن همین‌جا نمایش داده می‌شود.</span></div></div>;
 }
@@ -441,10 +445,12 @@ function ServiceView({
   onBack,
   onToast,
   onRegister,
+  onHall,
 }: {
   service: Service;
   onBack: () => void;
   onToast: (message: string) => void;
+  onHall: () => void;
   onRegister: (info: { car: string; problem: string; lat: number; lng: number; server: AssistanceRequest }) => void;
 }) {
   const [car, setCar] = useState("");
@@ -461,6 +467,8 @@ function ServiceView({
   const [problem, setProblem] = useState("");
   const [coords, setCoords] = useState<{ lat: number; lng: number } | null>(null);
   const [noticeOpen, setNoticeOpen] = useState(true);
+  const [onsiteConfig,setOnsiteConfig]=useState<OnsiteConfig|null>(null);
+  const onsiteCode=onsiteCodes[service.id];
 
   const pickOrigin = useCallback((lat: number, lng: number) => setCoords({ lat, lng }), []);
   const towingBody = service.id === "transport" && modelId && originPlace && destinationPlace && plate.trim().length >= 4 ? { vehicleName: car, vehicleModelId: modelId, vehiclePlate: plate.trim(), origin: { latitude: originPlace.latitude, longitude: originPlace.longitude }, destination: { latitude: destinationPlace.latitude, longitude: destinationPlace.longitude }, originPlaceId: originPlace.id, destinationPlaceId: destinationPlace.id, transportKind, heavyTraffic, rainOrSnow, hasExtraLoad } : null;
@@ -482,9 +490,10 @@ function ServiceView({
     if (!serviceAvailable(service)) { onToast("ثبت درخواست این خدمت هنوز در سرور فعال نشده است."); return; }
     if ((service.id === "transport" && !towingBody) || (service.id !== "transport" && !coords)) { onToast("مبدأ و مقصد موردنیاز را انتخاب کنید."); return; }
     if (service.id === "transport" && !currentEstimate?.value) { onToast(currentEstimate?.error || "ابتدا نام خودرو و آدرس‌های مبدأ و مقصد را انتخاب کنید و منتظر محاسبه مبلغ بمانید."); return; }
+    if(onsiteCode&&!onsiteConfig){onToast("خدمات موردنیاز را انتخاب کنید و منتظر محاسبهٔ قیمت بمانید.");return;}
     setBusy(true);
     try {
-      const server = await api<AssistanceRequest>(`/requests/${service.id === "transport" ? "towing" : "repair"}`, { method: "POST", body: service.id === "transport" ? towingBody : { vehicleName: car.trim(), vehiclePlate: plate.trim(), origin: { latitude: coords!.lat, longitude: coords!.lng }, problem: problem.trim() } });
+      const server = await api<AssistanceRequest>(`/requests/${requestSlugs[service.id]}`, { method: "POST", body: service.id === "transport" ? towingBody : { vehicleName: car.trim(), vehiclePlate: plate.trim(), origin: { latitude: coords!.lat, longitude: coords!.lng }, problem: problem.trim(),...(onsiteCode?onsiteConfig:{}) } });
       onRegister({ car, problem, lat: server.originLat, lng: server.originLng, server });
     } catch (error) { onToast(errorMessage(error)); }
     finally { setBusy(false); }
@@ -508,7 +517,7 @@ function ServiceView({
       <section className="panel-card service-request-card">
         <div className="request-heading">
           <span>درخواست خدمت</span>
-          <h2>خودرو و مشکل را مشخص کن</h2>
+          <h2>{onsiteCode?"خودرو و خدمات موردنیاز را مشخص کن":"خودرو و مشکل را مشخص کن"}</h2>
           <p>{service.id === "transport" ? "مبدأ و مقصد را با نام شهر و خیابان پیدا کن." : "موقعیت دریافت خدمت را روی نقشه انتخاب کن؛ بقیه‌اش با ما."}</p>
         </div>
         <form className="service-request-form" onSubmit={submit}>
@@ -523,11 +532,12 @@ function ServiceView({
                 <label className="check-label"><input type="checkbox" checked={hasExtraLoad} onChange={event => setHasExtraLoad(event.target.checked)} /><span>خودرو بار یا وزن اضافه دارد (توافقی)</span></label>
                 <p className="form-notice">ورودی و کرایه هر کیلومتر بر اساس گروه خودرو محاسبه می‌شود. بین ساعت ۰۰ تا ۰۶ به وقت تهران ۲۰٪ اضافه می‌شود؛ درصد شرایط ویژه با هم جمع می‌شوند. خودروهای فاقد تعرفه مشخص، توافقی هستند.</p>
               </>}
+              {onsiteCode&&<OnsiteOptions key={onsiteCode} service={onsiteCode} onConfigure={setOnsiteConfig}/>}
               {service.id === "roadside" && <p className="form-notice">ورودی تعمیر در محل برای همه خودروها ۸۰۰٬۰۰۰ تومان است. هزینه قطعات پس از بررسی خودرو جداگانه محاسبه می‌شود.</p>}
               <label className="form-field">
-                <span className="field-label">{service.id === "transport" ? "توضیحات حمل (اختیاری)" : "مشکل خودرو"}</span>
+                <span className="field-label">{service.id === "transport" ? "توضیحات حمل (اختیاری)" : onsiteCode?"توضیحات تکمیلی (اختیاری)":"مشکل خودرو"}</span>
                 <span className="field-control field-control--area">
-                  <textarea value={problem} onChange={(event) => setProblem(event.target.value)} placeholder="مثلاً: ماشین روشن نمی‌شود یا پنچر شده‌ام..." rows={4} required={service.id !== "transport"} minLength={service.id === "transport" ? undefined : 3} maxLength={2000} />
+                  <textarea value={problem} onChange={(event) => setProblem(event.target.value)} placeholder={onsiteCode?"زمان مناسب، شرایط محل یا توضیحات بیشتر…":"مثلاً: ماشین روشن نمی‌شود یا پنچر شده‌ام..."} rows={4} required={service.id === "roadside"} minLength={service.id === "roadside" ? 3 : undefined} maxLength={2000} />
                 </span>
               </label>
             </div>
@@ -560,12 +570,14 @@ function ServiceView({
         <div className="modal-overlay" role="dialog" aria-modal="true" aria-labelledby="trust-modal-title" onClick={() => setNoticeOpen(false)}>
           <div className="modal-box" onClick={(event) => event.stopPropagation()}>
             <span className="modal-icon"><Icon name="shield" size={24} /></span>
-            <h3 id="trust-modal-title">نکته مهم امنیتی</h3>
+            <h3 id="trust-modal-title">{service.id==="maintenance"?"سرویس دوره‌ای در محل":service.id==="inspection"?"انتخاب کارشناسی خودرو":"نکته مهم امنیتی"}</h3>
+            {service.id==="maintenance"&&<p>فقط لوازم محاسبه می‌گردد و اجرت تعویض رایگان است.</p>}
+            {service.id==="inspection"&&<><button type="button" className="primary-button" disabled>کارشناسی رایگان تا فروش ۲۴ ساعته · در حال تکمیل</button><p>این طرح برای سپردن فروش خودرو به تالار خودروچاره است و فعلاً فعال نیست.</p><button type="button" className="text-link" onClick={onHall}>رفتن به تالار خودرو</button></>}
             <p>
               برای امنیت و آرامش شما، لطفاً فقط از امدادگرانی استفاده کنید که آرم و علائم رسمی خودرو چاره را دارند.
               تنها خدمات این امدادگران شامل گارانتی، پیگیری و حمایت کامل شرکت است؛ لطفاً از پذیرش امدادگران آزاد و بدون نشان خودداری کنید.
             </p>
-            <button type="button" className="modal-confirm-btn" onClick={() => setNoticeOpen(false)}>فهمیدم</button>
+            <button type="button" className="modal-confirm-btn" onClick={() => setNoticeOpen(false)}>{service.id==="inspection"?"فقط کارشناسی خودرو":"فهمیدم"}</button>
           </div>
         </div>
       )}
@@ -619,6 +631,9 @@ function WaitingView({
       </div>
 
       <section className="waiting-sheet">
+        <p>مبلغ نهایی: {current.payment?.amountToman != null ? current.payment.amountToman.toLocaleString("fa-IR") + " تومان" : current.priceToman != null && (!["REPAIR","PERIODIC_SERVICE"].includes(current.service) || current.partsApprovedToman != null) ? (current.priceToman + (current.partsApprovedToman || 0)).toLocaleString("fa-IR") + " تومان" : "پس از تأیید قطعات یا توافق قیمت مشخص می‌شود"}</p>
+        {current.pricingBreakdown?.items&&<p>{current.pricingBreakdown.items.map(item=>item.name).join("، ")}</p>}
+        {current.payment?.status==="VERIFIED"&&<p role="status">{current.payment.method==="CASH"?"پرداخت در محل تأیید شد؛ تسویه شده":"پرداخت تأیید شده است."}</p>}
         <div className="waiting-timer">
           <span className="waiting-timer-label">{requestStatus(current.status)}</span>
           <strong className="waiting-timer-digits">{distanceText}</strong>
@@ -628,14 +643,14 @@ function WaitingView({
         <article className="driver-card">
           <Image src="/slides/driver-avatar.jpg" alt="امدادگر خودرو چاره" width={56} height={56} className="driver-photo" />
           <div className="driver-info">
-            <strong>{current.driverId ? "امدادگر درخواست شما" : "در انتظار پذیرش امدادگر"}</strong>
+            <strong>{current.driverId ? current.driver?.fullName || "امدادگر درخواست شما" : "در انتظار پذیرش امدادگر"}</strong>
             <small>{requestStatus(current.status)}</small>
             <span className="driver-vehicle"><Icon name="car" size={13} /> {live.tracking.stale ? "موقعیت تازه در دسترس نیست" : current.driverId ? "موقعیت زنده امدادگر" : "هنوز امدادگری تخصیص داده نشده"}</span>
           </div>
           <div className="driver-side">
-            <strong>{current.priceToman === null ? "توافقی" : current.priceToman.toLocaleString("fa-IR")} <small>تومان</small></strong>
-            <small>{current.service === "REPAIR" ? "ورودی تعمیر در محل" : "هزینه حمل خودرو"}</small>
-            {current.service === "REPAIR" && <small>قطعات پس از بررسی خودرو محاسبه می‌شوند.</small>}
+            <strong>{current.priceToman === null ? "توافقی" : (current.payment?.amountToman ?? current.priceToman + (current.partsApprovedToman || 0)).toLocaleString("fa-IR")} <small>تومان</small></strong>
+            <small>{current.payment || current.partsApprovedToman != null || !["REPAIR","PERIODIC_SERVICE"].includes(current.service) ? "مبلغ نهایی خدمات و قطعات تأییدشده" : current.service==="PERIODIC_SERVICE"?"اجرت تعویض رایگان؛ لوازم پس از تأیید":"ورودی تعمیر در محل"}</small>
+            {["REPAIR","PERIODIC_SERVICE"].includes(current.service) && <small>قطعات پس از بررسی خودرو محاسبه می‌شوند.</small>}
             {current.pricingBreakdown?.perKmToman && <small>ورودی {current.pricingBreakdown.baseToman?.toLocaleString("fa-IR")} + هر کیلومتر {current.pricingBreakdown.perKmToman.toLocaleString("fa-IR")} تومان</small>}
             {!!current.pricingBreakdown?.surchargePercent && <small>{current.pricingBreakdown.surchargePercent.toLocaleString("fa-IR")}٪ شرایط ویژه</small>}
             <div className="driver-actions">
@@ -649,7 +664,7 @@ function WaitingView({
           </div>
         </article>
 
-        {current.service === "REPAIR" && current.partsQuoteToman != null && current.partsApprovedToman == null && <section className="parts-quote-panel"><p>پیشنهاد هزینه قطعات: {current.partsQuoteToman.toLocaleString("fa-IR")} تومان؛ مبلغ خدمت و قطعات پس از تأیید شما برای پرداخت آماده می‌شود.</p><button className="primary-button" type="button" disabled={approving} onClick={async () => { setApproving(true); try { await api(`/requests/${current.id}/parts-quote/approve`, { method: "POST", body: { version: current.partsQuoteVersion } }); onToast("هزینه قطعات تأیید شد."); } catch (error) { onToast(errorMessage(error)); } finally { setApproving(false); } }}>تأیید هزینه قطعات</button></section>}
+        {["REPAIR","PERIODIC_SERVICE"].includes(current.service) && current.partsQuoteToman != null && current.partsApprovedToman == null && <section className="parts-quote-panel"><p>پیشنهاد هزینه قطعات: {current.partsQuoteToman.toLocaleString("fa-IR")} تومان؛ مبلغ خدمت و قطعات پس از تأیید شما برای پرداخت آماده می‌شود.</p><button className="primary-button" type="button" disabled={approving} onClick={async () => { setApproving(true); try { await api(`/requests/${current.id}/parts-quote/approve`, { method: "POST", body: { version: current.partsQuoteVersion } }); onToast("هزینه قطعات تأیید شد."); } catch (error) { onToast(errorMessage(error)); } finally { setApproving(false); } }}>تأیید هزینه قطعات</button></section>}
         {payOpen && <PaymentDialog requestId={current.id} onClose={() => setPayOpen(false)} />}
         <button type="button" className="pay-button" disabled={current.status === "EXPIRED"} onClick={() => setPayOpen(true)}>
           <Icon name="wallet" size={16} /> پرداخت
@@ -701,7 +716,7 @@ export default function Dashboard() {
       if (!cancelled) setLatestRequest(rows[0] || null);
       const active = rows.find(row => ["PENDING", "ACCEPTED", "ARRIVED"].includes(row.status));
       if (!cancelled && active) {
-        const service = services.find(s => s.id === (active.service === "TOWING" ? "transport" : "roadside"))!;
+        const service = services.find(s => s.id === serviceForCode(active.service))!;
         setRequest({ service, car: active.vehicleName, problem: active.problem || "", lat: active.originLat, lng: active.originLng, server: active });
         setView("waiting");
       }
@@ -751,7 +766,7 @@ export default function Dashboard() {
   switch (view) {
     case "home": content = <HomeView latestRequest={latestRequest} balance={balance} onService={openService} onNavigate={navigate} onToast={notify} />; break;
     case "wallet": content = <WalletPanel onBack={() => navigate("home")} />; break;
-    case "history": content = <HistoryView onBack={() => navigate("home")} onOpen={server => { const service = services.find(item => item.id === (server.service === "TOWING" ? "transport" : "roadside"))!; setRequest({ service, car: server.vehicleName, problem: server.problem || "", lat: server.originLat, lng: server.originLng, server }); navigate("waiting"); }} />; break;
+    case "history": content = <HistoryView onBack={() => navigate("home")} onOpen={server => { const service = services.find(item => item.id === serviceForCode(server.service))!; setRequest({ service, car: server.vehicleName, problem: server.problem || "", lat: server.originLat, lng: server.originLng, server }); navigate("waiting"); }} />; break;
     case "market": content = <MarketView onBack={() => navigate("home")} onToast={notify} />; break;
     case "hall": content = <CarHall onBack={() => navigate("home")} />; break;
     case "profile": content = <CustomerProfile onBack={() => navigate("home")} />; break;
@@ -761,7 +776,7 @@ export default function Dashboard() {
     case "support": content = <SupportTickets onBack={() => navigate("home")} />; break;
     case "reminder": content = <ServiceReminders onBack={() => navigate("home")} />; break;
     case "notifications": content = <NotificationsView onBack={() => navigate("home")} onToast={notify} />; break;
-    case "service": content = <ServiceView service={selectedService} onBack={() => navigate("home")} onToast={notify} onRegister={(info) => { setLatestRequest(info.server); setRequest({ service: selectedService, ...info }); navigate("waiting"); }} />; break;
+    case "service": content = <ServiceView key={selectedService.id} onHall={()=>navigate("hall")} service={selectedService} onBack={() => navigate("home")} onToast={notify} onRegister={(info) => { setLatestRequest(info.server); setRequest({ service: selectedService, ...info }); navigate("waiting"); }} />; break;
     case "waiting": content = request
       ? <WaitingView request={request} onBack={() => navigate("home")} onToast={notify} onCancel={cancelRequest} />
       : <HomeView latestRequest={latestRequest} balance={balance} onService={openService} onNavigate={navigate} onToast={notify} />; break;
