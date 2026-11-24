@@ -17,14 +17,14 @@ async function setup(page:Page,isDriver=false){
 }
 async function wizard(page:Page){await page.goto(customer+'/home?view=hall');await page.locator('.launch-splash').waitFor({state:'detached'});await page.locator('.ch-heading').getByRole('button',{name:/ثبت آگهی/}).click();await expect(page.getByLabel('تصاویر خودرو',{exact:true})).toBeAttached();}
 
-test('customer-only 3D shortcuts animate, remain single-line at 320px and respect reduced motion',async({page})=>{
+test('eight colourful dimensional customer icons stay lightweight, single-line at 320px and respect reduced motion',async({page})=>{
  await setup(page);await page.setViewportSize({width:320,height:800});await page.goto(customer+'/home');await page.locator('.launch-splash').waitFor({state:'detached'});
- const row=page.locator('.main-service-shortcuts');await expect(row.locator('.service-art3d')).toHaveCount(4);await expect(row.locator('.service-art3d svg')).toHaveCount(4);
- expect(await row.locator('linearGradient').count()).toBeGreaterThanOrEqual(8);await expect(row.locator('.service-art3d').first()).toHaveCSS('animation-name','icon3d-float');
+ const row=page.locator('.main-service-shortcuts');await expect(row.locator('.main-service-icon')).toHaveCount(4);await expect(row.locator('.main-service-icon svg')).toHaveCount(4);
+ await expect(page.locator('.main-service-icon')).toHaveCount(8);const gradients=await page.locator('.main-service-icon linearGradient').evaluateAll(elements=>elements.map(el=>el.id));expect(new Set(gradients).size).toBe(gradients.length);expect(gradients.length).toBeGreaterThan(0);await expect(row.locator('.main-service-icon').first()).toHaveCSS('animation-name','none');
  const label=row.locator('.shortcut-parts-label');await expect(label).toHaveCSS('white-space','nowrap');expect(await label.evaluate(el=>el.getBoundingClientRect().width<=el.parentElement!.getBoundingClientRect().width)).toBe(true);
- await row.screenshot({path:'hall-photo-icon-results/customer-shortcuts-mobile.png',animations:'disabled'});
- await page.setViewportSize({width:1440,height:1000});await row.screenshot({path:'hall-photo-icon-results/customer-shortcuts-desktop.png',animations:'disabled'});
- await page.emulateMedia({reducedMotion:'reduce'});for(const icon of await row.locator('.service-art3d').all())await expect(icon).toHaveCSS('animation-name','none');await expect(row.locator('.shortcut-import-arrow').first()).toHaveCSS('animation-name','none');
+ await page.locator('.main-services-section').first().screenshot({path:'hall-photo-icon-results/customer-eight-icons-mobile.png',animations:'disabled'});
+ await page.setViewportSize({width:1440,height:1000});await page.locator('.main-services-section').first().screenshot({path:'hall-photo-icon-results/customer-eight-icons-desktop.png',animations:'disabled'});
+ await page.emulateMedia({reducedMotion:'reduce'});for(const icon of await row.locator('.main-service-icon').all())await expect(icon).toHaveCSS('animation-name','none');
  await row.getByRole('button',{name:'واردات خودرو',exact:true}).click();await expect(page.getByRole('dialog')).toBeVisible();await page.getByRole('button',{name:'متوجه شدم',exact:true}).click();await row.getByRole('button',{name:'فروش خودرو',exact:true}).click();await expect(page.locator('.ch-hall')).toBeVisible();
 });
 test('driver home no longer has any of the four customer-only shortcuts',async({page})=>{

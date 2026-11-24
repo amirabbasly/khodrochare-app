@@ -24,6 +24,7 @@ import { LocationTelemetry } from "@/components/LocationTelemetry";
 import { LocationPermissionModal } from "@/components/LocationPermissionModal";
 import { useRouter } from "next/navigation";
 import {DiagnosticOffer} from "./DiagnosticOffer";
+import {MainServiceIcon} from "./MainServiceIcon";
 import {MainServiceShortcuts} from "./MainServiceShortcuts";
 import { BrandLogo, Icon } from "@/components/Icons";
 import { MiniCar } from "@/components/Artwork";
@@ -321,9 +322,9 @@ function HomeView({
       <section className="main-services-section">
         <SectionTitle title="خدمات اصلی خودرو چاره" caption="چهار خدمت پرطرفدار ما، همیشه آمادهٔ کمک به تو." />
         <div className="main-services-grid">
-          {mainServices.map((service, index) => (
+          {mainServices.map((service) => (
             <button key={service.id} className={`main-service-card main-service-card--${service.id}`} aria-haspopup={!serviceAvailable(service) ? "dialog" : undefined} type="button" onClick={() => onService(service)}>
-                      <span className="main-service-art"><ServiceIllustration type={service.id} size="lg" delay={index * 0.35} /></span>
+                      <span className="main-service-art"><MainServiceIcon name={service.id}/></span>
               <strong>{service.name}</strong>
               <small>{service.note}</small>
             </button>

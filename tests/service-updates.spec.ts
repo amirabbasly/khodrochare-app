@@ -20,7 +20,7 @@ for(const service of ['REPAIR','TOWING','MOBILE_CARWASH','PERIODIC_SERVICE','INS
  try{await page.goto('http://localhost:3385/home');await page.locator('.launch-splash').waitFor({state:'detached'});await page.getByRole('button',{name:'باز کردن منو',exact:true}).click();await page.getByRole('button',{name:'بارهای من',exact:true}).click();await page.getByRole('tab',{name:/در حال انجام/}).click();await page.getByRole('button',{name:'ادامهٔ بار',exact:true}).click();
   const finish=page.locator('.job-actions .primary-button');await expect(finish).toBeDisabled();
   if(service==='REPAIR'){hold=true;await expect.poll(()=>waiting,{timeout:12000}).toBe(true);}
-  {const checkbox=page.getByRole('checkbox',{name:'کمیسیون به من پرداخت کرد',exact:true});await expect(checkbox).toBeEnabled();await expect(checkbox).not.toBeChecked();await checkbox.check();}await expect(page.getByRole('button',{name:'وجه کامل را در محل دریافت کردم',exact:true})).toHaveCount(0);
+  {const checkbox=page.getByRole('checkbox',{name:'مبلغ کامل رو به من پرداخت کرد',exact:true});await expect(checkbox).toBeEnabled();await expect(checkbox).not.toBeChecked();await checkbox.check();}await expect(page.getByRole('button',{name:'وجه کامل را در محل دریافت کردم',exact:true})).toHaveCount(0);
   await expect(finish).toBeEnabled();expect(receipts).toBe(1);
   if(service==='REPAIR'){const oldResponse=page.waitForResponse(r=>new URL(r.url()).pathname.endsWith('/requests'));stale.resolve();await oldResponse;await page.evaluate(()=>new Promise<void>(r=>requestAnimationFrame(()=>requestAnimationFrame(()=>r()))));await expect(finish).toBeEnabled();}
   if(!repair)await finish.click();await finish.click();await expect.poll(()=>completed).toBe(true);expect(receipts).toBe(1);
@@ -72,7 +72,7 @@ test('customer supplemental services have four distinct icons and the parts labe
  await page.setViewportSize({width:320,height:800});await page.goto('http://localhost:3384/home');await page.locator('.launch-splash').waitFor({state:'detached'});
  const row=page.locator('.main-service-shortcuts');await expect(row.locator('svg')).toHaveCount(4);
  const check=await row.locator('.shortcut-parts-label').evaluate(el=>{const style=getComputedStyle(el),parent=el.parentElement!;return{nowrap:style.whiteSpace,within:el.getBoundingClientRect().width<=parent.getBoundingClientRect().width,text:el.textContent};});expect(check.nowrap).toBe('nowrap');expect(check.within).toBe(true);expect(check.text).toBe('واردات قطعات خاص');
- await row.screenshot({path:'service-update-test-results/customer-main-shortcuts-320.png'});
+ await expect(page.locator('.main-service-icon')).toHaveCount(8);await page.locator('.main-services-section').first().screenshot({path:'service-update-test-results/customer-eight-icons-320.png'});
 });
 
 test('operator verification tab previews private documents, approves drivers and edits approved information',async({page})=>{
@@ -86,13 +86,36 @@ test('operator verification tab previews private documents, approves drivers and
   if(p.endsWith('/documents/doc'))return r.fulfill({json:{image:'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+a+WQAAAAASUVORK5CYII='}});
   if(p.endsWith('/profile')){edits++;Object.assign(driver,r.request().postDataJSON());driver.verificationVersion++;return r.fulfill({json:driver});}
   if(p.endsWith('/review')){approved++;driver.verificationStatus='APPROVED';driver.verificationVersion++;driver.verificationReviewedAt=new Date().toISOString();return r.fulfill({json:driver});}
-  if(p.endsWith('/'+driver.id))return r.fulfill({json:{user:driver,documents:[{id:'doc',createdAt:new Date().toISOString()}]}});
+  if(p.endsWith('/'+driver.id))return r.fulfill({json:{user:driver,documents:['NATIONAL_ID','BIRTH_CERTIFICATE','DRIVING_LICENSE','VEHICLE_OWNERSHIP'].map((kind,i)=>({id:i===0?'doc':'doc-'+i,verificationKind:kind,vehicleEvidenceType:kind==='VEHICLE_OWNERSHIP'?'INSURANCE':null,createdAt:new Date().toISOString()}))}});
   return r.fulfill({json:{items:[],pagination:{page:1,total:0,totalPages:1,limit:20}}});
  });
  await page.goto('http://localhost:3386/super-app');await page.getByRole('tab',{name:'احراز امدادگران',exact:true}).click();await page.getByRole('button',{name:'بررسی مدارک و ویرایش',exact:true}).click();
  const modal=page.getByRole('dialog');await expect(modal).toContainText('امدادگر');await expect(modal.getByRole('link',{name:'09120000002'})).toHaveAttribute('href','tel:09120000002');
- await modal.getByRole('button',{name:/مشاهده مدرک هویتی فعلی/}).click();await expect(modal.getByRole('img')).toBeVisible();
+ await modal.getByRole('button',{name:/کارت ملی/ }).click();await expect(modal.getByRole('img')).toBeVisible();
  await modal.getByRole('button',{name:'تأیید مدارک و فعال‌سازی ماژول‌ها',exact:true}).click();await expect(modal.getByRole('button',{name:'تأیید مدارک و فعال‌سازی ماژول‌ها',exact:true})).toBeDisabled();expect(approved).toBe(1);
  await modal.getByLabel('شهر فعالیت',{exact:true}).fill('مشهد');await modal.getByRole('button',{name:'ذخیره اطلاعات',exact:true}).click();await expect.poll(()=>edits).toBe(1);expect(driver.activityCity).toBe('مشهد');expect(driver.verificationStatus).toBe('APPROVED');
  await page.screenshot({path:'service-update-test-results/operator-driver-verification.png',fullPage:true});
+});
+
+for(const previouslySeen of [false,true])test(`driver correction reason replaces unseen welcome and completes four document groups (${previouslySeen?'existing':'new'} account)`,async({page})=>{
+ const user:any={...await session(page,true),verificationStatus:'NEEDS_CORRECTION',verificationNote:'تصویر کارت ملی خوانا نیست؛ شناسنامه و مدرک خودرو را هم بارگذاری کنید.',verificationReviewedAt:'2026-11-24T10:00:00Z',verificationNoticeSeenAt:null,registrationNoticeSeenAt:previouslySeen?'2026-11-24T09:00:00Z':null,documents:[]};
+ let uploads=0,submitted=0,noticeAcks=0;
+ await page.route('**/api/v1/**',r=>{const p=new URL(r.request().url()).pathname;
+  if(p.endsWith('/me'))return r.fulfill({json:user});
+  if(p.endsWith('/documents')&&r.request().method()==='POST'){uploads++;return r.fulfill({json:{id:`00000000-0000-4000-8000-${String(uploads).padStart(12,'0')}`,token:'f'.repeat(64)}});}
+  if(p.endsWith('/me/verification-documents')){const body=r.request().postDataJSON();user.documents=user.documents.filter((doc:any)=>doc.verificationKind!==body.kind);user.documents.push({id:body.document.id,mimeType:'image/png',verificationKind:body.kind,vehicleEvidenceType:body.vehicleEvidenceType||null});return r.fulfill({status:204});}
+  if(p.endsWith('/verification-documents/submit')){submitted++;user.verificationStatus='PENDING';user.registrationNoticeSeenAt='2026-11-24T10:01:00Z';return r.fulfill({json:user});}
+  if(p.includes('/verification-notices/')){noticeAcks++;return r.fulfill({json:user});}
+  if(p.endsWith('/requests')||p.endsWith('/available'))return r.fulfill({json:[]});
+  return r.fulfill({json:{balanceToman:0,entries:[],totalToman:0,driver:null}});
+ });
+ await page.setViewportSize({width:390,height:844});await page.goto('http://localhost:3385/home');await page.locator('.launch-splash').waitFor({state:'detached'});const dialog=page.getByRole('dialog');await expect(dialog).toContainText(user.verificationNote);await expect(dialog).not.toContainText('خوش آمدید');await expect(dialog).not.toContainText('ثبت‌نام شما با موفقیت');
+ await dialog.getByRole('button',{name:'تکمیل احراز هویت',exact:true}).click();await expect(page.getByRole('heading',{name:'مدارک و احراز هویت',exact:true})).toBeVisible();await expect(dialog).toHaveCount(0);const submit=page.getByRole('button',{name:'ارسال مدارک برای بررسی',exact:true});await expect(submit).toBeDisabled();
+ const file={name:'identity.png',mimeType:'image/png',buffer:Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+jgS8AAAAASUVORK5CYII=','base64')};
+ for(const [i,title] of ['کارت ملی','شناسنامه','گواهینامه','مدرک خودرو'].entries()){
+  if(title==='مدرک خودرو')await page.getByLabel('نوع مدرک خودرو',{exact:true}).selectOption('INSURANCE');
+  await page.getByLabel(`بارگذاری ${title}`,{exact:true}).setInputFiles(file);await expect.poll(()=>user.documents.length).toBe(i+1);await expect(page.locator('.document-upload input').first()).toBeEnabled();await expect(dialog).toHaveCount(0);
+ }
+ await expect(submit).toBeEnabled();expect(user.documents.filter((doc:any)=>doc.verificationKind==='VEHICLE_OWNERSHIP')).toHaveLength(1);expect(user.documents.find((doc:any)=>doc.verificationKind==='VEHICLE_OWNERSHIP').vehicleEvidenceType).toBe('INSURANCE');
+ expect(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth)).toBe(true);await page.screenshot({path:`service-update-test-results/correction-documents-${previouslySeen?'existing':'new'}.png`,fullPage:true});await submit.click();await expect.poll(()=>submitted).toBe(1);expect(noticeAcks).toBe(0);await page.reload();await page.locator('.launch-splash').waitFor({state:'detached'});await expect(dialog).toHaveCount(0);
 });
