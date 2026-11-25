@@ -4,3 +4,6 @@
 
 .sr-page a.sr-primary{color:#fff}.ch-tabs a.is-active{color:#b64c12;border-bottom:2px solid #e56d24;background:#fff4e9}.sr-card-actions a{min-height:44px;display:inline-flex;align-items:center}.sr-directory-cover h2{color:white}
 .sr-hero .sr-hero-copy p{color:#fff;text-shadow:0 1px 8px #0009}
+.ch-tabs a.is-active{border-bottom:0}.ch-tabs a.is-active::after{content:none}
+.sr-photo-field{display:flex;flex-direction:column;gap:8px;margin-bottom:16px;font-size:13px;color:#435962}.sr-photo-field small{color:#657680;line-height:1.8}.sr-page .sr-file-input{display:none}.sr-photo-picker{display:flex;align-items:center;justify-content:center;gap:8px;width:100%;color:#a34513;border-color:#e7c7ae;background:#fff7f0}
+@media(max-width:680px){.sr-page .sr-actions{display:flex;flex-direction:column;align-items:stretch}.sr-page .sr-actions>button,.sr-page .sr-actions>a{width:100%;text-align:center;justify-content:center}.sr-page .sr-form>button,.sr-page .sr-form>fieldset>button,.sr-page form>fieldset>button,.sr-page .sr-heading>button{width:100%}}
