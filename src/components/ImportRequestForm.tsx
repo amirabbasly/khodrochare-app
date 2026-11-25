@@ -1,0 +1,15 @@
+"use client";
+import {useState,type FormEvent} from 'react';
+import {api,getSession,latinDigits} from '@/lib/api';
+import {HallCaptcha} from './hall/HallCaptcha';
+import './hall/hall.css';
+export function ImportRequestForm({kind}:{kind:'cars'|'parts'}){
+ const [values,setValues]=useState(()=>({fullName:getSession()?.user.fullName||'',phone:getSession()?.user.phone||'',city:'',subject:'',description:'',partCode:''}));
+ const [captcha,setCaptcha]=useState(false),[busy,setBusy]=useState(false),[sent,setSent]=useState(false);
+ const [id,setId]=useState<string|null>(null),cars=kind==='cars';
+ function change(key:keyof typeof values,value:string){setValues(old=>({...old,[key]:value}));}
+ function submit(e:FormEvent){e.preventDefault();if(busy)return;if(!id)setId(crypto.randomUUID());setCaptcha(true);}
+ async function finish(proof:string){setBusy(true);try{await api('/imports/requests',{method:'POST',body:{...values,id:id,kind:cars?'CARS':'PARTS',proof}});setSent(true);setCaptcha(false);}finally{setBusy(false);}}
+ if(sent)return <section className="panel-card import-form" role="status"><h2>درخواست شما با موفقیت ثبت شد</h2><p>کارشناسان درخواست شما را بررسی می‌کنند و برای پیگیری با شماره‌ای که ثبت کرده‌اید تماس می‌گیرند.</p></section>;
+ return <section className="panel-card import-form"><h2>فرم درخواست {cars?'واردات خودرو':'واردات قطعات خاص'}</h2><p>مشخصات را وارد کنید؛ پس از زدن دکمه ثبت، پازل را تکمیل کنید تا درخواست برای بررسی ارسال شود.</p><form onSubmit={submit}><fieldset disabled={busy||captcha}><div className="import-form-grid"><label>نام و نام خانوادگی<input required minLength={2} maxLength={120} autoComplete="name" value={values.fullName} onChange={e=>change('fullName',e.target.value)}/></label><label>شماره همراه<input required pattern="09[0-9]{9}" maxLength={11} inputMode="tel" dir="ltr" autoComplete="tel" value={values.phone} onChange={e=>change('phone',latinDigits(e.target.value))} title="شماره همراه ۱۱ رقمی با ۰۹"/></label><label>شهر<input required minLength={2} maxLength={100} autoComplete="address-level2" value={values.city} onChange={e=>change('city',e.target.value)}/></label><label>{cars?'برند و مدل خودرو':'نام قطعه و مدل خودرو'}<input required minLength={2} maxLength={200} value={values.subject} onChange={e=>change('subject',e.target.value)}/></label>{!cars&&<label>کد قطعه (اختیاری)<input maxLength={100} value={values.partCode} onChange={e=>change('partCode',e.target.value)}/></label>}<label className="import-form-description">توضیحات درخواست<textarea required minLength={10} maxLength={3000} rows={5} value={values.description} onChange={e=>change('description',e.target.value)} placeholder={cars?'سال ساخت، مشخصات و شرایط خودروی موردنظر':'مشخصات قطعه، تعداد موردنیاز و توضیحات تکمیلی'}/></label></div><button className="primary-button" type="submit">ثبت درخواست</button></fieldset></form>{captcha&&id&&<HallCaptcha listingId={id} endpoint={`/imports/captcha/${id}`} title="تکمیل پازل برای ثبت درخواست" onClose={()=>{if(!busy)setCaptcha(false);}} onVerified={finish}/>}</section>;
+}

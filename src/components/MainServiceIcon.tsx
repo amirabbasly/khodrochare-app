@@ -11,7 +11,7 @@ const colours:Record<string,[string,string,string]>={
 };
 export function MainServiceIcon({name}:{name:string}){
  const instance=useId().replace(/:/g,''),[light,base,dark]=colours[name]||colours.roadside;
- if(name==='parts-import')return <span className="main-service-icon main-service-icon--parts-import" aria-hidden="true"><Image className="main-service-icon-object" src="/icons/parts-import-emblem.png" width={64} height={64} sizes="(max-width: 600px) 52px, 64px" alt=""/></span>;
+ if(name==='parts-import'||name==='car-import')return <span className={`main-service-icon main-service-icon--${name}`} aria-hidden="true"><Image className="main-service-icon-object" src={name==='car-import'?'/icons/car-import-emblem.png':'/icons/parts-import-emblem.png'} width={64} height={64} sizes="(max-width: 600px) 52px, 64px" alt=""/></span>;
  const paint=(part:string)=>`url(#${instance}-${part})`;
  let drawing:ReactNode;
  switch(name){
