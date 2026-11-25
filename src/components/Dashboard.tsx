@@ -10,7 +10,7 @@ import { usePendingFeature } from "./PendingFeature";
 import { SupportTickets } from "./SupportTickets";
 import { ServiceReminders } from "./ServiceReminders";
 import { MarketStore } from "./MarketStore";
-import { CarHall } from "./hall/CarHall";
+import { CarHall,type HallRoute } from "./hall/CarHall";
 import { CustomerProfile } from "./CustomerProfile";
 import "./account-polish.css";
 import { IranPlate } from "@/components/IranPlate";
@@ -23,6 +23,7 @@ import { useCallback, useEffect, useState, type FormEvent, type ReactNode } from
 import { LocationTelemetry } from "@/components/LocationTelemetry";
 import { LocationPermissionModal } from "@/components/LocationPermissionModal";
 import { useRouter } from "next/navigation";
+import {InspectionChoice} from './InspectionChoice';
 import {DiagnosticOffer} from "./DiagnosticOffer";
 import {MainServiceIcon} from "./MainServiceIcon";
 import {MainServiceShortcuts} from "./MainServiceShortcuts";
@@ -450,12 +451,10 @@ function ServiceView({
   onBack,
   onToast,
   onRegister,
-  onHall,
 }: {
   service: Service;
   onBack: () => void;
   onToast: (message: string) => void;
-  onHall: () => void;
   onRegister: (info: { car: string; problem: string; lat: number; lng: number; server: AssistanceRequest }) => void;
 }) {
   const [car, setCar] = useState("");
@@ -571,18 +570,18 @@ function ServiceView({
       </section>
       </div>
 
-      {noticeOpen && (
+      {noticeOpen && service.id==="inspection"&&<InspectionChoice onChoose={()=>setNoticeOpen(false)}/>}
+      {noticeOpen && service.id!=="inspection" && (
         <div className="modal-overlay" role="dialog" aria-modal="true" aria-labelledby="trust-modal-title" onClick={() => setNoticeOpen(false)}>
           <div className="modal-box" onClick={(event) => event.stopPropagation()}>
             <span className="modal-icon"><Icon name="shield" size={24} /></span>
-            <h3 id="trust-modal-title">{service.id==="maintenance"?"سرویس دوره‌ای در محل":service.id==="inspection"?"انتخاب کارشناسی خودرو":"نکته مهم امنیتی"}</h3>
+            <h3 id="trust-modal-title">{service.id==="maintenance"?"سرویس دوره‌ای در محل":"نکته مهم امنیتی"}</h3>
             {service.id==="maintenance"&&<p>فقط لوازم محاسبه می‌گردد و اجرت تعویض رایگان است.</p>}
-            {service.id==="inspection"&&<><button type="button" className="primary-button" disabled>کارشناسی رایگان تا فروش ۲۴ ساعته · در حال تکمیل</button><p>این طرح برای سپردن فروش خودرو به تالار خودروچاره است و فعلاً فعال نیست.</p><button type="button" className="text-link" onClick={onHall}>رفتن به تالار خودرو</button></>}
             <p>
               برای امنیت و آرامش شما، لطفاً فقط از امدادگرانی استفاده کنید که آرم و علائم رسمی خودرو چاره را دارند.
               تنها خدمات این امدادگران شامل گارانتی، پیگیری و حمایت کامل شرکت است؛ لطفاً از پذیرش امدادگران آزاد و بدون نشان خودداری کنید.
             </p>
-            <button type="button" className="modal-confirm-btn" onClick={() => setNoticeOpen(false)}>{service.id==="inspection"?"فقط کارشناسی خودرو":"فهمیدم"}</button>
+            <button type="button" className="modal-confirm-btn" onClick={() => setNoticeOpen(false)}>{"فهمیدم"}</button>
           </div>
         </div>
       )}
@@ -683,12 +682,12 @@ function WaitingView({
 }
 
 
-export default function Dashboard() {
+export default function Dashboard({hallRoute}:{hallRoute?:HallRoute}={}) {
   const showPendingFeature = usePendingFeature();
   const router = useRouter();
   const ensureProfile = useCustomerProfileGate();
   const [selectedService, setSelectedService] = useState<Service>(services[0]);
-  const [view, setView] = useState<View>("home");
+  const [view, setView] = useState<View>(hallRoute?"hall":"home");
   useEffect(() => {
     const params = new URLSearchParams(window.location.search), target = params.get("view");
     if (!["hall","support","reminder","market","wallet","profile","mycars","service","history","addresses","diagnostic"].includes(target || "")) return;
@@ -720,14 +719,14 @@ export default function Dashboard() {
     api<AssistanceRequest[]>("/requests").then(rows => {
       if (!cancelled) setLatestRequest(rows[0] || null);
       const active = rows.find(row => ["PENDING", "ACCEPTED", "ARRIVED"].includes(row.status));
-      if (!cancelled && active) {
+      if (!cancelled && active && !hallRoute) {
         const service = services.find(s => s.id === serviceForCode(active.service))!;
         setRequest({ service, car: active.vehicleName, problem: active.problem || "", lat: active.originLat, lng: active.originLng, server: active });
         setView("waiting");
       }
     }).catch(() => {});
     return () => { cancelled = true; };
-  }, []);
+  }, [hallRoute]);
 
   function notify(message: string) {
     setToast(message);
@@ -735,6 +734,7 @@ export default function Dashboard() {
   }
 
   function navigate(next: View) {
+    if(hallRoute){router.push(next==='hallchat'?'/hall/chat':next==='home'?'/home':'/home?view='+next);return;}
     if(next!=="home"&&next!=="profile"&&next!=="diagnostic"&&!ensureProfile(next==='hallchat'?'/hall/chat':'/home?view='+next)){setDrawerOpen(false);return;}
     if(next === "hallchat"){setDrawerOpen(false);router.push("/hall/chat");return;}
 
@@ -745,6 +745,7 @@ export default function Dashboard() {
   }
 
   function openService(service: Service) {
+    if(hallRoute){router.push('/home?view=service&service='+service.id);return;}
     if(service.id==="diagnostic"){navigate("diagnostic");return;}
     if (!serviceAvailable(service)) { showPendingFeature(); return; }
     if (service.id === "expert") { navigate("support"); return; }
@@ -775,7 +776,7 @@ export default function Dashboard() {
     case "wallet": content = <WalletPanel onBack={() => navigate("home")} />; break;
     case "history": content = <HistoryView onBack={() => navigate("home")} onOpen={server => { const service = services.find(item => item.id === serviceForCode(server.service))!; setRequest({ service, car: server.vehicleName, problem: server.problem || "", lat: server.originLat, lng: server.originLng, server }); navigate("waiting"); }} />; break;
     case "market": content = <MarketView onBack={() => navigate("home")} onToast={notify} />; break;
-    case "hall": content = <CarHall onBack={() => navigate("home")} />; break;
+    case "hall": content = <CarHall initialRoute={hallRoute} onBack={() => navigate("home")} />; break;
     case "profile": content = <CustomerProfile onBack={() => navigate("home")} />; break;
     case "mycars": content = <MyCarsView onBack={() => navigate("home")} onToast={notify} />; break;
     case "addresses": content = <AddressesView onBack={() => navigate("home")} onToast={notify} />; break;
@@ -783,7 +784,7 @@ export default function Dashboard() {
     case "support": content = <SupportTickets onBack={() => navigate("home")} />; break;
     case "reminder": content = <ServiceReminders onBack={() => navigate("home")} />; break;
     case "notifications": content = <NotificationsView onBack={() => navigate("home")} onToast={notify} />; break;
-    case "service": content = <ServiceView key={selectedService.id} onHall={()=>navigate("hall")} service={selectedService} onBack={() => navigate("home")} onToast={notify} onRegister={(info) => { setLatestRequest(info.server); setRequest({ service: selectedService, ...info }); navigate("waiting"); }} />; break;
+    case "service": content = <ServiceView key={selectedService.id} service={selectedService} onBack={() => navigate("home")} onToast={notify} onRegister={(info) => { setLatestRequest(info.server); setRequest({ service: selectedService, ...info }); navigate("waiting"); }} />; break;
     case "waiting": content = request
       ? <WaitingView request={request} onBack={() => navigate("home")} onToast={notify} onCancel={cancelRequest} />
       : <HomeView latestRequest={latestRequest} balance={balance} onService={openService} onNavigate={navigate} onToast={notify} />; break;

@@ -1,2 +1,2 @@
-import {ShowroomDirectory} from '@/components/showrooms/ShowroomPublic';
-export default function Page(){return <ShowroomDirectory/>;}
+import Dashboard from '@/components/Dashboard';
+export default function Page(){return <Dashboard key='showrooms' hallRoute={{view:'showrooms'}}/>;}

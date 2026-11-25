@@ -16,7 +16,7 @@ export function safeReturnPath(value:string|null|undefined){
 }
 export function useCustomerProfileGate(){
  const {user}=useSessionState(),router=useRouter();
- return useCallback((next='/home')=>{if(user?.profileComplete!==false)return true;router.push('/complete-profile?next='+encodeURIComponent(safeReturnPath(next)));return false;},[router,user?.profileComplete]);
+ return useCallback((next='/home')=>{if(user?.profileComplete!==false||user.showroomAccess&&(next.startsWith('/hall')||next.includes('view=hall')))return true;router.push('/complete-profile?next='+encodeURIComponent(safeReturnPath(next)));return false;},[router,user]);
 }
 export function CustomerProfileListener(){
  const router=useRouter();

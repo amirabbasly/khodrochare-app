@@ -1,2 +1,2 @@
-import {ShowroomManage} from '@/components/showrooms/ShowroomManage';
-export default function Page(){return <ShowroomManage/>;}
+import Dashboard from '@/components/Dashboard';
+export default function Page(){return <Dashboard key='showroomMine' hallRoute={{view:'showroomMine'}}/>;}

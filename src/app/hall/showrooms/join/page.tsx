@@ -1,2 +1,2 @@
-import {ShowroomJoin} from '@/components/showrooms/ShowroomJoin';
-export default function Page(){return <ShowroomJoin/>;}
+import Dashboard from '@/components/Dashboard';
+export default function Page(){return <Dashboard key='showroomJoin' hallRoute={{view:'showroomJoin'}}/>;}
