@@ -330,7 +330,7 @@ function HomeView({
             </button>
           ))}
         </div>
-        <MainServiceShortcuts onImport={showPendingFeature} onSell={()=>onNavigate("hall")} onMarket={()=>onNavigate("market")}/>
+        <MainServiceShortcuts onSell={()=>onNavigate("hall")} onMarket={()=>onNavigate("market")}/>
       </section>
 
       <HeroSlider onService={onService} onExplore={() => document.getElementById("services")?.scrollIntoView({ behavior: "smooth" })} />

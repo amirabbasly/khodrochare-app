@@ -31,7 +31,14 @@ for(const driver of [false,true])test(`${driver?'driver':'customer'} shortcuts a
  await page.route('**/api/v1/**',r=>{const p=new URL(r.request().url()).pathname;if(p.endsWith('/me'))return r.fulfill({json:user});if(p.includes('/checkout')||p.includes('/payments'))payments++;if(p.endsWith('/requests')||p.endsWith('/available'))return r.fulfill({json:[]});return r.fulfill({json:{items:[],total:0,page:1,limit:12,pagination:{page:1,totalPages:1,total:0,limit:20},totalToman:0,balanceToman:0,entries:[],driver:null}});});
  const root=`http://localhost:${driver?3385:3384}`;await page.goto(root+'/home');await page.locator('.launch-splash').waitFor({state:'detached'});const row=page.locator('.main-service-shortcuts');
  if(driver){await expect(row).toHaveCount(0);}else{
- await expect(row.getByRole('button',{name:'واردات خودرو',exact:true})).toBeVisible();await expect(row.getByRole('button',{name:'واردات قطعات خاص',exact:true})).toBeVisible();await row.getByRole('button',{name:'واردات خودرو',exact:true}).click();await expect(page.getByRole('dialog')).toBeVisible();await page.getByRole('button',{name:'متوجه شدم',exact:true}).click();
+ for(const [label,path] of [['واردات خودرو','cars'],['واردات قطعات خاص','parts']]){
+  await page.locator('.main-service-shortcuts').getByRole('link',{name:label,exact:true}).click();await expect(page).toHaveURL(new RegExp('/imports/'+path+'$'));await expect(page.getByRole('heading',{name:label,exact:true})).toBeVisible();
+  await expect(page.locator('.import-hero')).toContainText('هلدینگ اوژن تجارت');await expect(page.locator('.import-hero')).toContainText('۲۵ سال');
+  await expect(page.locator('.import-contact a[href="tel:+989122229979"]')).toBeVisible();await expect(page.locator('.import-contact a[href="tel:+982191006662"]')).toContainText('021-91006662');
+  await expect(page.getByRole('link',{name:/گفتگو در واتساپ/})).toHaveAttribute('href',/^https:\/\/wa.me\/989397979861\?text=/);
+  await page.setViewportSize({width:390,height:844});expect(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth)).toBe(true);await page.screenshot({path:`service-update-test-results/import-${path}-mobile.png`,fullPage:true});await page.getByRole('link',{name:'بازگشت به خانه',exact:true}).click();await page.locator('.launch-splash').waitFor({state:'detached'});
+ }
+
  {await row.getByRole('button',{name:'فروش خودرو',exact:true}).click();await expect(page.locator('.ch-hall')).toBeVisible();await page.goto(root+'/home');await page.locator('.launch-splash').waitFor({state:'detached'});}
  await page.locator('.main-service-shortcuts').getByRole('button',{name:'جمعه بازار',exact:true}).click();await expect(page.locator('.jm-store')).toBeVisible();
  }
