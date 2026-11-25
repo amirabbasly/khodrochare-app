@@ -70,7 +70,7 @@ test('driver registration and approval notices appear once, pending can browse b
 test('customer supplemental services have four distinct icons and the parts label stays on one line at 320px',async({page})=>{
  const user=await session(page,false);await page.route('**/api/v1/**',r=>r.fulfill({json:new URL(r.request().url()).pathname.endsWith('/me')?user:[]}));
  await page.setViewportSize({width:320,height:800});await page.goto('http://localhost:3384/home');await page.locator('.launch-splash').waitFor({state:'detached'});
- const row=page.locator('.main-service-shortcuts');await expect(row.locator('svg')).toHaveCount(4);
+ const row=page.locator('.main-service-shortcuts');await expect(row.locator('svg')).toHaveCount(3);await expect(row.locator('img')).toHaveCount(1);await row.scrollIntoViewIfNeeded();await expect.poll(()=>row.locator('img').evaluate(el=>(el as HTMLImageElement).naturalWidth)).toBeGreaterThan(0);
  const check=await row.locator('.shortcut-parts-label').evaluate(el=>{const style=getComputedStyle(el),parent=el.parentElement!;return{nowrap:style.whiteSpace,within:el.getBoundingClientRect().width<=parent.getBoundingClientRect().width,text:el.textContent};});expect(check.nowrap).toBe('nowrap');expect(check.within).toBe(true);expect(check.text).toBe('واردات قطعات خاص');
  await expect(page.locator('.main-service-icon')).toHaveCount(8);await page.locator('.main-services-section').first().screenshot({path:'service-update-test-results/customer-eight-icons-320.png'});
 });

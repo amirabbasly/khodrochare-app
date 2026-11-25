@@ -1,5 +1,6 @@
 "use client";
 import {useId,type ReactNode} from 'react';
+import Image from 'next/image';
 import './main-service-icon.css';
 
 const colours:Record<string,[string,string,string]>={
@@ -10,6 +11,7 @@ const colours:Record<string,[string,string,string]>={
 };
 export function MainServiceIcon({name}:{name:string}){
  const instance=useId().replace(/:/g,''),[light,base,dark]=colours[name]||colours.roadside;
+ if(name==='parts-import')return <span className="main-service-icon main-service-icon--parts-import" aria-hidden="true"><Image className="main-service-icon-object" src="/icons/parts-import-emblem.png" width={64} height={64} sizes="(max-width: 600px) 52px, 64px" alt=""/></span>;
  const paint=(part:string)=>`url(#${instance}-${part})`;
  let drawing:ReactNode;
  switch(name){
@@ -40,32 +42,47 @@ export function MainServiceIcon({name}:{name:string}){
    <path d="M24 21c-6 8-8 12-8 17 0 4 1 7 4 9" stroke="#E0F7FF" strokeWidth="3.5" fill="none" opacity=".8"/>
   </>;break;
   case 'car-import':drawing=<>
-   <path d="m17 19 6-9h20l7 10 5 7v21H14V27z" fill={dark}/>
-   <path d="m13 17 6-9h20l7 10 5 7v21H10V25z" fill={paint('body')}/><path d="m19 12-4 11h28l-7-11z" fill={paint('glass')}/>
-   <path d="M12 30h10m17 0h10" stroke="#F4FBFF" strokeWidth="3.5"/>
-   <rect x="14" y="44" width="7" height="8" rx="3" fill="#2B3C4E"/><rect x="40" y="44" width="7" height="8" rx="3" fill="#2B3C4E"/>
-   <rect x="24" y="36" width="13" height="3" rx="1.5" fill={dark}/>
-   <path d="M49 5v13m-5-4 5 5 5-5" stroke="#F0FCF6" strokeWidth="7"/>
-   <path d="M49 5v13m-5-4 5 5 5-5" stroke="#58BFA6" strokeWidth="3.5"/>
-  </>;break;
-  case 'parts-import':drawing=<>
-   <path d="m11 19 21-11 23 12v27L34 58 11 46z" fill={dark}/><path d="m8 17 22-11 22 11-22 12z" fill={light}/>
-   <path d="m8 17 22 12v27L8 44z" fill={paint('body')}/><path d="m30 29 22-12v27L30 56z" fill={dark}/>
-   <path d="m21 11 22 11" stroke="#EAE3FF" strokeWidth="4"/>
-   <path d="M19 29v13m-5-7 5 7 5-2" stroke="#F4F0FF" strokeWidth="3" fill="none"/>
-   <path d="M12 23v18" stroke="#E4DCFF" strokeWidth="1.8" opacity=".55"/>
+   {/* Front-facing BMW: sharp light signatures and the twin kidney grille. */}
+   <path d="M12 46V31l6-15 8-5h15l8 6 5 15v14z" fill="#17263B"/>
+   <path d="m10 32 7-16 8-6h14l8 6 7 16-3 16H13z" fill={paint('body')}/>
+   <path d="m20 17 6-4h11l7 4 4 11H16z" fill="#192C43"/>
+   <path d="m23 17 4-2h10l5 3H22z" fill="#8BB6E4" opacity=".65"/>
+   <path d="m16 29 10-2h12l11 2-5 6H20z" fill={light}/>
+   <path d="m21 30 5 3m17-3-5 3" stroke="#D1E4FF" strokeWidth="1.3"/>
+   <path d="M27 33h4v10h-5l-1-7zm6 0h4l2 3-1 7h-5z" fill="#101D30" stroke="#CBD8ED" strokeWidth="1.3"/>
+   <path d="M28 35v6m7-6v6" stroke="#5A718A" strokeWidth=".8"/>
+   <path d="m13 33 8 2 2 3-9-1m36-4-8 2-2 3 9-1" stroke="#EDFAFF" strokeWidth="2.3"/>
+   <path d="m14 41 6 1-2 3h-5zm36 0-6 1 2 3h5z" fill="#13243C"/>
+   <path d="M23 47h18l3-2H20z" fill="#182B43"/>
+   <rect x="13" y="46" width="7" height="7" rx="2" fill="#142136"/><rect x="44" y="46" width="7" height="7" rx="2" fill="#142136"/>
+   <circle cx="32" cy="30" r="1.8" fill="#F4F8FF"/>
+   <path d="M32 28.6a1.4 1.4 0 0 1 1.4 1.4H32zm0 2.8a1.4 1.4 0 0 1-1.4-1.4H32z" fill="#3D8DE4"/>
+   <path d="M11 28H7m47 0h3" stroke="#314D71" strokeWidth="3"/>
   </>;break;
   case 'car-sale':drawing=<>
-   <path d="M11 9h25l21 21-26 26L10 35z" fill={dark}/><path d="M8 6h25l21 21-26 26L7 32z" fill={paint('body')}/>
-   <path d="M8 6h25l3 3H11L10 33l-3-1z" fill={light}/><circle cx="20" cy="18" r="4.5" fill={dark}/><circle cx="19" cy="17" r="3.2" fill="#F1FCF8"/>
-   <path d="m24 35 12-12m-7 17 12-12" stroke="#EBFFF7" strokeWidth="3.2"/>
+   {/* A single round clock with an unmistakable 24-hour mark. */}
+   <circle cx="33" cy="33" r="24" fill={dark}/>
+   <circle cx="30" cy="30" r="24" fill={paint('body')}/>
+   <circle cx="30" cy="30" r="18.5" fill="#F1FBF8"/>
+   <path d="M30 14v3m-16 13h3m26 0h3M30 43v3" stroke={base} strokeWidth="2"/>
+   <g stroke={dark} strokeWidth="2.8" fill="none">
+    <path d="M20 25c0-5 8-5 8 0 0 3-8 5-8 10h8"/>
+    <path d="m39 22-7 9h10m-3-9v14"/>
+   </g>
+   <path d="M48 16a24 24 0 0 1 5 12" stroke="#DBFFF2" strokeWidth="3"/>
+   <path d="m47 20 1-6 6 1" stroke="#F1FFF9" strokeWidth="2.6" fill="none"/>
   </>;break;
   case 'friday-market':drawing=<>
-   <path d="M15 22h36v32H15z" fill={dark}/><path d="M11 19h36v32H11z" fill={paint('metal')}/><path d="m47 19 4 3v32l-4-3z" fill="#A9B7CA"/>
-   <rect x="24" y="32" width="12" height="19" rx="2" fill={paint('glass')}/><path d="M11 11h35l6 12H6z" fill={paint('body')}/>
-   <path d="M16 11h7l-1 12h-9zm14 0h7l3 12H30z" fill="#F6EEFF"/>
-   <path d="M6 23c0 7 9 7 9 0 0 7 9 7 9 0 0 7 9 7 9 0 0 7 9 7 9 0 0 7 10 7 10 0" fill={base}/>
-   <path d="M15 23c0 7 9 7 9 0m9 0c0 7 9 7 9 0" fill="#F6EEFF"/><path d="M10 11h36" stroke={light} strokeWidth="2"/>
+   {/* Magnifying glass finds a low price: one search lens and a down arrow. */}
+   <path d="m42 40 14 13a4 4 0 0 1-6 6L37 45z" fill={dark}/>
+   <path d="m41 38 14 13a4 4 0 0 1-6 6L36 43z" fill={paint('body')}/>
+   <circle cx="28" cy="27" r="21" fill={dark}/>
+   <circle cx="26" cy="25" r="21" fill={paint('body')}/>
+   <circle cx="26" cy="25" r="15.8" fill="#FAF6FF"/>
+   <path d="M26 15v18m-6-6 6 6 6-6" stroke={dark} strokeWidth="3.6" fill="none"/>
+   <path d="M18 37h16" stroke={base} strokeWidth="2"/>
+   <path d="M12 20a15 15 0 0 1 10-9" stroke="#FFFFFF" strokeWidth="2.4" opacity=".85"/>
+   <path d="m44 45 6 6" stroke={light} strokeWidth="2"/>
   </>;break;
   default:drawing=<>
    <path d="M45 8a12 12 0 0 0-17 15L9 42a6 6 0 0 0 9 9l19-19A12 12 0 0 0 52 15l-9 9-7-7z" fill={dark}/>

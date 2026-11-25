@@ -1,6 +1,7 @@
 ﻿.main-service-icon{display:grid;place-items:center;width:68px;height:68px;flex-shrink:0;isolation:isolate;background:none;border:0;border-radius:0}
 .main-service-icon svg{width:64px;height:64px;overflow:visible;filter:drop-shadow(0 3px 2px rgb(35 59 86 / .1))!important}
+.main-service-icon img{width:64px;height:64px;object-fit:contain}
 .main-service-icon-object{transform-box:fill-box;transform-origin:center;transition:transform .2s ease}
 .main-service-card:hover .main-service-icon-object,.main-service-shortcuts>button:hover .main-service-icon-object{transform:translateY(-2px)}
-@media(max-width:600px){.main-service-icon{width:52px;height:52px}.main-service-icon svg{width:52px;height:52px}}
+@media(max-width:600px){.main-service-icon{width:52px;height:52px}.main-service-icon svg,.main-service-icon img{width:52px;height:52px}}
 @media(prefers-reduced-motion:reduce){.main-service-icon-object{transition:none;transform:none!important}}
