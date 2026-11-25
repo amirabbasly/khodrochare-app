@@ -36,10 +36,10 @@ async function setup(page:Page){
   return send({items:[],total:0});
  });return calls;
 }
-test('Hall inserts distinct horizontally scrolling promotions after each four cards and stays within mobile viewport',async({page})=>{
+test('Hall shows the featured slider above a continuous feed within mobile viewport',async({page})=>{
  await page.setViewportSize({width:390,height:844});await setup(page);await page.goto(`${appUrl}/home?view=hall`);await page.locator('.launch-splash').waitFor({state:'detached'});
- await expect(page.locator('.ch-feed-group')).toHaveCount(2);await page.getByRole('button',{name:'خرید خودرو',exact:true}).click();await expect(page.locator('.ch-card')).toHaveCount(8);for(const group of await page.locator('.ch-feed-group').all())await expect(group.locator('.ch-card')).toHaveCount(4);
- await expect(page.locator('.ch-story-row')).toHaveCount(2);const labels=await page.locator('.ch-story>strong').allTextContents();expect(new Set(labels).size).toBe(labels.length);
+ await expect(page.getByRole('region',{name:'آگهی‌های ویژه تالار خودرو'})).toBeVisible();await page.getByRole('button',{name:'خرید خودرو',exact:true}).click();await expect(page.locator('.ch-card')).toHaveCount(8);
+ await expect(page.locator('.ch-story-row')).toHaveCount(0);await expect(page.locator('.ch-feed-group')).toHaveCount(0);
  expect(await page.locator('.ch-hall').evaluate(el=>el.getBoundingClientRect().right)).toBeLessThanOrEqual(391);
 });
 test('Hall four-step free publication keeps an independent contact and never requests payment',async({page})=>{
