@@ -1,0 +1,5 @@
+"use client";
+import {useEffect,useState} from 'react';
+import {api} from '@/lib/api';
+export type Capacity={available:number;nextAvailableAt:string|null;durationHours:number};
+export function useFeaturedCapacity(initial?:Capacity){const [value,setValue]=useState<Capacity|undefined>(initial),[now,setNow]=useState(()=>Date.now());useEffect(()=>{const c=new AbortController(),timer=setInterval(()=>setNow(Date.now()),1000);const poll=setInterval(()=>{api<{featuredAvailability:Capacity}>('/hall/catalog',{auth:false,signal:c.signal}).then(r=>setValue(r.featuredAvailability)).catch(()=>{});},30000);return()=>{clearInterval(timer);clearInterval(poll);c.abort();};},[]);const state=value||initial,seconds=state?.nextAvailableAt?Math.max(0,Math.ceil((Date.parse(state.nextAvailableAt)-now)/1000)):0;return {full:state?.available===0,message:state?.available===0?`ظرفیت ۶ اسلاید ویژه تکمیل است؛ تا ${Math.floor(seconds/3600).toLocaleString('fa-IR')} ساعت و ${Math.floor(seconds%3600/60).toLocaleString('fa-IR')} دقیقه و ${(seconds%60).toLocaleString('fa-IR')} ثانیه بعد، جایگاه بعدی آزاد می‌شود.`:'مدت نمایش ویژه: ۶ ساعت؛ حداکثر ۶ اسلاید.'};}
