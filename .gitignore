@@ -52,5 +52,7 @@ next-env.d.ts
 /otp-*.log
 
 /service-update-test-results/
+/wallet-test-results/
 
 /hall-photo-icon-results/
+/wallet-recheck-results/
