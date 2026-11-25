@@ -1,0 +1,1 @@
+export function ModuleLoading(){return <section role="status" aria-live="polite" aria-busy="true" style={{minHeight:240,display:'grid',placeItems:'center',padding:24,color:'#536471'}}>در حال بارگذاری…</section>;}

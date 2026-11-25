@@ -1,5 +1,5 @@
 import {test,expect,type Page} from '@playwright/test';
-const base='http://localhost:3310',apiBase='https://api.khodrochare.ir/api/v1';
+const base=`http://localhost:${Number(process.env.HALL_E2E_PORT||3310)}`,apiBase='https://api.khodrochare.ir/api/v1';
 const catalog={version:'test-tariff',checkedAt:'2026-11-23',city:'تهران',services:{MOBILE_CARWASH:[{code:'FULL',name:'کارواش کامل؛ روشویی و نظافت داخل'},{code:'TIRE_WAX',name:'واکس چهار لاستیک'}],INSPECTION:[{code:'FULL_INSPECTION',name:'کارشناسی کامل بدنه و فنی'}],PERIODIC_SERVICE:[{code:'ENGINE_OIL',name:'روغن موتور'},{code:'AIR_FILTER',name:'فیلتر هوا'}]}};
 async function setup(page:Page){
  const user={id:'owner',role:'CUSTOMER',phone:'09121234567',fullName:'مشتری نمونه',nationalId:'1234567891',profileComplete:true,services:[],vehicles:[]};
@@ -32,5 +32,5 @@ for(const [id,code] of [['carwash','MOBILE_CARWASH'],['maintenance','PERIODIC_SE
  if(id==='carwash'){await page.getByRole('button',{name:'پرداخت',exact:true}).click();await page.getByRole('button',{name:'پرداخت در محل به امدادگر'}).click();await expect(page.getByRole('dialog',{name:'پرداخت خدمات'})).toContainText('منتظر تأیید دریافت وجه');}
 });
 test('wallet receipt stays pending and never immediately credits a customer',async({page})=>{
- await setup(page);await page.goto(base+'/home?view=wallet');await page.locator('.launch-splash').waitFor({state:'detached'});await page.getByLabel('مبلغ واریز (تومان)').fill('300000');await page.getByLabel('شماره پیگیری بانکی').fill('123456789');await page.getByLabel(/تصویر رسید/).setInputFiles({name:'receipt.png',mimeType:'image/png',buffer:Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+jgS8AAAAASUVORK5CYII=','base64')});await page.getByRole('button',{name:'ثبت رسید برای بررسی'}).click();await expect(page.getByText(/رسید ثبت شد؛ شارژ حساب فقط/)).toBeVisible();await expect(page.getByText(/در انتظار تأیید اپراتور/)).toBeVisible();await expect(page.locator('.wallet-balance')).toHaveText('۰ تومان');
+ await setup(page);await page.goto(base+'/home?view=wallet');await page.locator('.launch-splash').waitFor({state:'detached'});await expect(page.getByLabel('مبلغ واریز (تومان)')).toHaveCount(0);await page.getByLabel('بارگذاری رسید برای افزایش موجودی',{exact:true}).setInputFiles({name:'receipt.png',mimeType:'image/png',buffer:Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+jgS8AAAAASUVORK5CYII=','base64')});await expect(page.getByRole('status').filter({hasText:'فیش ثبت شد؛ پشتیبانی پس از بررسی و تعیین مبلغ'})).toBeVisible();await expect(page.getByText(/در انتظار بررسی مبلغ/)).toBeVisible();await expect(page.locator('.wallet-balance')).toHaveText('۰ تومان');
 });
