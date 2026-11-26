@@ -7542,3 +7542,4 @@ a {
 .splash-session-error{max-height:calc(50dvh - var(--splash-symbol-size)/2 - 24px);overflow:auto}
 .launch-splash:has(.splash-session-error) .splash-footer{display:none}
 @media(max-height:520px) and (min-width:600px){.splash-details:has(.splash-session-error){top:50%;left:auto;right:24px;transform:translateY(-50%);width:calc((100vw - var(--splash-symbol-size))/2 - 48px);max-width:280px}.splash-session-error{max-height:calc(100dvh - 48px);margin-top:0}}
+input[type="file"]::file-selector-button{background:#ed6a20;color:#fff;border:0;border-radius:10px;padding:12px 18px;margin-inline-end:12px;font:inherit;cursor:pointer}

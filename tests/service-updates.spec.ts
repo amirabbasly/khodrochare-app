@@ -84,7 +84,7 @@ test('customer supplemental services have four distinct icons and the parts labe
 
 test('operator verification tab previews private documents, approves drivers and edits approved information',async({page})=>{
  const operator={id:1,role:'admin',first_name:'مدیر',last_name:'نمونه',username:'admin'};
- const driver:any={id:'00000000-0000-4000-8000-000000000001',role:'DRIVER',fullName:'امدادگر نمونه',phone:'09120000002',nationalId:'1234567891',vehicleType:'نیسان',vehiclePlate:'12 ب 345',activityCity:'تهران',activityDistrict:'مرکزی',services:['REPAIR'],isActive:true,identityDocumentId:'doc',verificationStatus:'PENDING',verificationVersion:0,createdAt:new Date().toISOString()};
+ const driver:any={noDrivingLicense:true,id:'00000000-0000-4000-8000-000000000001',role:'DRIVER',fullName:'امدادگر نمونه',phone:'09120000002',nationalId:'1234567891',vehicleType:'نیسان',vehiclePlate:'12 ب 345',activityCity:'تهران',activityDistrict:'مرکزی',services:['REPAIR'],isActive:true,identityDocumentId:'doc',verificationStatus:'PENDING',verificationVersion:0,createdAt:new Date().toISOString()};
  let approved=0,edits=0;
  await page.addInitScript(user=>{localStorage.setItem('kcrm.token','test-token');localStorage.setItem('kcrm.user',JSON.stringify(user));},operator);
  await page.route('**/api/**',r=>{const p=new URL(r.request().url()).pathname;
@@ -93,7 +93,7 @@ test('operator verification tab previews private documents, approves drivers and
   if(p.endsWith('/documents/doc'))return r.fulfill({json:{image:'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+a+WQAAAAASUVORK5CYII='}});
   if(p.endsWith('/profile')){edits++;Object.assign(driver,r.request().postDataJSON());driver.verificationVersion++;return r.fulfill({json:driver});}
   if(p.endsWith('/review')){approved++;driver.verificationStatus='APPROVED';driver.verificationVersion++;driver.verificationReviewedAt=new Date().toISOString();return r.fulfill({json:driver});}
-  if(p.endsWith('/'+driver.id))return r.fulfill({json:{user:driver,affiliation:{branding:false,activity:'OTHER_COMPANY',companyName:'Affiliation Test'},documents:['NATIONAL_ID','BIRTH_CERTIFICATE','DRIVING_LICENSE','VEHICLE_OWNERSHIP'].map((kind,i)=>({id:i===0?'doc':'doc-'+i,verificationKind:kind,vehicleEvidenceType:kind==='VEHICLE_OWNERSHIP'?'INSURANCE':null,createdAt:new Date().toISOString()}))}});
+  if(p.endsWith('/'+driver.id))return r.fulfill({json:{user:driver,affiliation:{branding:false,activity:'OTHER_COMPANY',companyName:'Affiliation Test'},documents:['NATIONAL_ID'].map((kind,i)=>({id:i===0?'doc':'doc-'+i,verificationKind:kind,vehicleEvidenceType:kind==='VEHICLE_OWNERSHIP'?'INSURANCE':null,createdAt:new Date().toISOString()}))}});
   return r.fulfill({json:{items:[],pagination:{page:1,total:0,totalPages:1,limit:20}}});
  });
  await page.goto('http://localhost:3386/super-app');await page.getByRole('tab',{name:'احراز امدادگران',exact:true}).click();await page.getByRole('button',{name:'بررسی مدارک و ویرایش',exact:true}).click();
@@ -104,7 +104,7 @@ test('operator verification tab previews private documents, approves drivers and
  await page.screenshot({path:'service-update-test-results/operator-driver-verification.png',fullPage:true});
 });
 
-for(const previouslySeen of [false,true])test(`driver correction reason replaces unseen welcome and completes four document groups (${previouslySeen?'existing':'new'} account)`,async({page})=>{
+for(const previouslySeen of [false,true])test(`driver correction reason replaces unseen welcome and completes flexible document groups (${previouslySeen?'existing':'new'} account)`,async({page})=>{
  const user:any={...await session(page,true),verificationStatus:'NEEDS_CORRECTION',verificationNote:'تصویر کارت ملی خوانا نیست؛ شناسنامه و مدرک خودرو را هم بارگذاری کنید.',verificationReviewedAt:'2026-11-24T10:00:00Z',verificationNoticeSeenAt:null,registrationNoticeSeenAt:previouslySeen?'2026-11-24T09:00:00Z':null,documents:[]};
  let uploads=0,submitted=0,noticeAcks=0;
  await page.route('**/api/v1/**',r=>{const p=new URL(r.request().url()).pathname;
@@ -119,9 +119,9 @@ for(const previouslySeen of [false,true])test(`driver correction reason replaces
  await page.setViewportSize({width:390,height:844});await page.goto('http://localhost:3385/home');await page.locator('.launch-splash').waitFor({state:'detached'});const dialog=page.getByRole('dialog');await expect(dialog).toContainText(user.verificationNote);await expect(dialog).not.toContainText('خوش آمدید');await expect(dialog).not.toContainText('ثبت‌نام شما با موفقیت');
  await dialog.getByRole('button',{name:'تکمیل احراز هویت',exact:true}).click();await expect(page.getByRole('heading',{name:'مدارک و احراز هویت',exact:true})).toBeVisible();await expect(dialog).toHaveCount(0);const submit=page.getByRole('button',{name:'ارسال مدارک برای بررسی',exact:true});await expect(submit).toBeDisabled();
  const file={name:'identity.png',mimeType:'image/png',buffer:Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+jgS8AAAAASUVORK5CYII=','base64')};
- for(const [i,title] of ['کارت ملی','شناسنامه','گواهینامه','مدرک خودرو'].entries()){
-  if(title==='مدرک خودرو')await page.getByLabel('نوع مدرک خودرو',{exact:true}).selectOption('INSURANCE');
-  await page.getByLabel(`بارگذاری ${title}`,{exact:true}).setInputFiles(file);await expect.poll(()=>user.documents.length).toBe(i+1);await expect(page.locator('.document-upload input').first()).toBeEnabled();await expect(dialog).toHaveCount(0);
+ for(const [i,title] of ['شناسنامه یا کارت ملی','گواهینامه','مدرک خودرو (اختیاری)'].entries()){
+  if(title.startsWith('مدرک خودرو'))await page.getByLabel('نوع مدرک خودرو',{exact:true}).selectOption('INSURANCE');
+  await page.getByLabel(`بارگذاری ${title}`,{exact:true}).setInputFiles(file);await expect.poll(()=>user.documents.length).toBe(i+1);await expect(page.locator('.orange-upload input').first()).toBeEnabled();await expect(dialog).toHaveCount(0);
  }
  await expect(submit).toBeEnabled();expect(user.documents.filter((doc:any)=>doc.verificationKind==='VEHICLE_OWNERSHIP')).toHaveLength(1);expect(user.documents.find((doc:any)=>doc.verificationKind==='VEHICLE_OWNERSHIP').vehicleEvidenceType).toBe('INSURANCE');
  expect(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth)).toBe(true);await page.screenshot({path:`service-update-test-results/correction-documents-${previouslySeen?'existing':'new'}.png`,fullPage:true});await submit.click();await expect.poll(()=>submitted).toBe(1);expect(noticeAcks).toBe(0);await page.reload();await page.locator('.launch-splash').waitFor({state:'detached'});await expect(dialog).toHaveCount(0);
