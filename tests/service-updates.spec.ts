@@ -93,11 +93,11 @@ test('operator verification tab previews private documents, approves drivers and
   if(p.endsWith('/documents/doc'))return r.fulfill({json:{image:'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+a+WQAAAAASUVORK5CYII='}});
   if(p.endsWith('/profile')){edits++;Object.assign(driver,r.request().postDataJSON());driver.verificationVersion++;return r.fulfill({json:driver});}
   if(p.endsWith('/review')){approved++;driver.verificationStatus='APPROVED';driver.verificationVersion++;driver.verificationReviewedAt=new Date().toISOString();return r.fulfill({json:driver});}
-  if(p.endsWith('/'+driver.id))return r.fulfill({json:{user:driver,documents:['NATIONAL_ID','BIRTH_CERTIFICATE','DRIVING_LICENSE','VEHICLE_OWNERSHIP'].map((kind,i)=>({id:i===0?'doc':'doc-'+i,verificationKind:kind,vehicleEvidenceType:kind==='VEHICLE_OWNERSHIP'?'INSURANCE':null,createdAt:new Date().toISOString()}))}});
+  if(p.endsWith('/'+driver.id))return r.fulfill({json:{user:driver,affiliation:{branding:false,activity:'OTHER_COMPANY',companyName:'Affiliation Test'},documents:['NATIONAL_ID','BIRTH_CERTIFICATE','DRIVING_LICENSE','VEHICLE_OWNERSHIP'].map((kind,i)=>({id:i===0?'doc':'doc-'+i,verificationKind:kind,vehicleEvidenceType:kind==='VEHICLE_OWNERSHIP'?'INSURANCE':null,createdAt:new Date().toISOString()}))}});
   return r.fulfill({json:{items:[],pagination:{page:1,total:0,totalPages:1,limit:20}}});
  });
  await page.goto('http://localhost:3386/super-app');await page.getByRole('tab',{name:'احراز امدادگران',exact:true}).click();await page.getByRole('button',{name:'بررسی مدارک و ویرایش',exact:true}).click();
- const modal=page.getByRole('dialog');await expect(modal).toContainText('امدادگر');await expect(modal.getByRole('link',{name:'09120000002'})).toHaveAttribute('href','tel:09120000002');
+ const modal=page.getByRole('dialog');await expect(modal).toContainText('Affiliation Test');await expect(modal).toContainText('امدادگر');await expect(modal.getByRole('link',{name:'09120000002'})).toHaveAttribute('href','tel:09120000002');
  await modal.getByRole('button',{name:/کارت ملی/ }).click();await expect(modal.getByRole('img')).toBeVisible();
  await modal.getByRole('button',{name:'تأیید مدارک و فعال‌سازی ماژول‌ها',exact:true}).click();await expect(modal.getByRole('button',{name:'تأیید مدارک و فعال‌سازی ماژول‌ها',exact:true})).toBeDisabled();expect(approved).toBe(1);
  await modal.getByLabel('شهر فعالیت',{exact:true}).fill('مشهد');await modal.getByRole('button',{name:'ذخیره اطلاعات',exact:true}).click();await expect.poll(()=>edits).toBe(1);expect(driver.activityCity).toBe('مشهد');expect(driver.verificationStatus).toBe('APPROVED');
