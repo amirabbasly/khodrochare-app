@@ -13,9 +13,9 @@ test('showroom OTP login remembers the owner and inactive accounts cannot open m
   if(p.endsWith('/showrooms/auth/verify')){signedIn=true;return r.fulfill({json:{token:'c'.repeat(64),expiresAt:new Date(Date.now()+86400000).toISOString(),user}});}
   if(p.endsWith('/showrooms/account'))return r.fulfill({json:{...account,isActive:active}});
   if(p.endsWith('/showrooms/mine'))return r.fulfill({json:{items:[]}});
-  return r.fulfill({json:{items:[],plans:[],banners:[]}});
+  return r.fulfill({json:{items:[],total:0,page:1,limit:12,plans:[],banners:[]}});
  });
- await page.goto(root+'/hall/showrooms/mine');await expect(page).toHaveURL(root+'/hall/showrooms/login');await page.locator('.launch-splash').waitFor({state:'detached'});
+ await page.goto(root+'/hall/showrooms/mine');await expect(page).toHaveURL(root+'/hall/showrooms/login',{timeout:20000});await page.locator('.launch-splash').waitFor({state:'detached'});
  await page.getByLabel('شماره موبایل مالک',{exact:true}).fill('09121234567');await page.getByRole('button',{name:'دریافت کد فعال‌سازی',exact:true}).click();await page.getByLabel('کد فعال‌سازی',{exact:true}).fill('123456');await page.getByRole('button',{name:'تأیید و ادامه',exact:true}).click();await expect(page).toHaveURL(root+'/hall/showrooms/mine');await expect(page.getByRole('button',{name:'نمایشگاه جدید',exact:true})).toBeVisible();
  expect(await page.evaluate(()=>JSON.parse(localStorage.getItem('khodrochare_customer_session_v2')||'{}').token)).toBe('c'.repeat(64));await page.reload();await page.locator('.launch-splash').waitFor({state:'detached'});await expect(page.getByRole('button',{name:'نمایشگاه جدید',exact:true})).toBeVisible();expect(otp).toBe(1);
  await page.screenshot({path:test.info().outputPath('management.png'),fullPage:true});active=false;await page.reload();await expect(page.locator('.sr-error[role=alert]')).toContainText('غیرفعال');await expect(page.getByRole('button',{name:'نمایشگاه جدید',exact:true})).toHaveCount(0);
@@ -29,7 +29,7 @@ test('showroom login and registration are separate and an owner session survives
   if(p.endsWith('/showrooms/catalog'))return r.fulfill({json:{provinces:['تهران'],activityTypes:['نمایشگاه']}});
   if(p.endsWith('/showrooms/mine'))return r.fulfill({json:{items:[]}});
   if(p.endsWith('/showrooms/auth/otp')){otp++;return r.fulfill({json:{challengeId:uuid}});}
-  return r.fulfill({json:{items:[],plans:[],banners:[]}});
+  return r.fulfill({json:{items:[],total:0,page:1,limit:12,plans:[],banners:[]}});
  });
  await page.setViewportSize({width:390,height:844});
  await page.goto(root+'/hall/showrooms/login');await page.locator('.launch-splash').waitFor({state:'detached'});
@@ -40,7 +40,10 @@ test('showroom login and registration are separate and an owner session survives
  await page.screenshot({path:test.info().outputPath('registration-mobile.png'),fullPage:true});
  owner=true;await page.goto(root+'/hall/showrooms/login');await expect(page).toHaveURL(root+'/hall/showrooms/mine');
  await expect(page.getByRole('button',{name:'ویرایش اطلاعات حساب',exact:true})).toBeVisible();await page.reload();await expect(page.getByRole('button',{name:'نمایشگاه جدید',exact:true})).toBeVisible();expect(otp).toBe(0);
- await page.screenshot({path:test.info().outputPath('owner-mobile.png'),fullPage:true});
+ await page.locator('.launch-splash').waitFor({state:'detached'});
+ const tools=page.locator('.sr-panel-tools');const actionBoxes=await tools.locator('button').evaluateAll(nodes=>nodes.map(node=>{const b=node.getBoundingClientRect();return {top:b.top,bottom:b.bottom,x:b.x};}));expect(actionBoxes).toHaveLength(3);expect(Math.max(...actionBoxes.map(b=>b.top))-Math.min(...actionBoxes.map(b=>b.top))).toBeLessThan(2);const title=await page.getByRole('heading',{name:'نمایشگاه‌های من',exact:true}).boundingBox();expect(title!.y).toBeGreaterThanOrEqual(Math.max(...actionBoxes.map(b=>b.bottom)));
+ const tabs=page.getByRole('navigation',{name:'بخش‌های تالار'});const navBoxes=await tabs.locator(':scope > button,:scope > a').evaluateAll(nodes=>nodes.map(node=>{const b=node.getBoundingClientRect();return {x:b.x,width:b.width,icons:node.querySelectorAll('svg').length};}));expect(navBoxes).toHaveLength(3);expect(navBoxes[0].x).toBeGreaterThan(navBoxes[1].x);expect(navBoxes[1].x).toBeGreaterThan(navBoxes[2].x);expect(Math.max(...navBoxes.map(b=>b.width))-Math.min(...navBoxes.map(b=>b.width))).toBeLessThan(2);expect(navBoxes.every(b=>b.icons===1)).toBe(true);expect(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth)).toBe(true);
+ await page.screenshot({path:test.info().outputPath('owner-mobile.png'),fullPage:true});await page.goto(root+'/hall/showrooms');await expect(page.getByRole('link',{name:'ورود به پنل مدیریت',exact:true})).toHaveAttribute('href','/hall/showrooms/mine');await expect(page.getByRole('link',{name:'ثبت‌نام نمایشگاه',exact:true})).toHaveCount(0);
 });
 const account={userId:'owner',name:'اتوگالری نمونه',ownerName:'مالک نمونه',activityType:'نمایشگاه',province:'تهران',city:'تهران',district:'مرکزی',landline:'02112345678',address:'تهران خیابان نمونه پلاک ۱۲',isActive:true,user:{phone:'09121234567'}};
 const showroom=()=>({id:uuid,ownerId:'owner',status:'PUBLISHED',isActive:true,version:1,draft:{name:'اتوگالری نمونه',slogan:'همراه مطمئن معامله',biography:'معرفی نمایشگاه و سابقه فعالیت در بازار خودرو',manager:{name:'مدیر نمونه',phone:'09121234567',bio:'معرفی مدیر و خدمات نمایشگاه',position:'مدیر نمایشگاه',photoId:'person'},staff:[{name:'مشاور نمونه',phone:'09120000002',position:'کارشناس خرید و فروش',bio:'همراه شما در انتخاب خودرو',photoId:'person'}]},location:account,account,photos:[{id:'shop',kind:'SHOP',url:image},{id:'shop2',kind:'SHOP',url:image},{id:'person',kind:'PERSON',url:image}],campaign:null});
