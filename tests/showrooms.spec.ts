@@ -1,6 +1,47 @@
 import {test,expect,type Page} from '@playwright/test';
 const root='http://localhost:3384',uuid='00000000-0000-4000-8000-000000000001';
 const image=root+'/slides/hall-buy.webp';
+
+test('showroom OTP login remembers the owner and inactive accounts cannot open management',async({page})=>{
+ let signedIn=false,active=true,otp=0;const user={id:'owner',role:'CUSTOMER',fullName:'مالک نمونه',phone:'09121234567',profileComplete:true,showroomAccess:true,services:[],vehicles:[]};
+ await page.addInitScript(()=>localStorage.setItem('khodrochare_location_choice_v2','dismissed'));
+ await page.route('**/socket.io/**',r=>r.abort());
+ await page.route('**/api/v1/**',r=>{const p=new URL(r.request().url()).pathname;
+  if(p.endsWith('/me'))return r.fulfill({status:signedIn?200:401,json:signedIn?user:{error:'Unauthorized'}});
+  if(p.endsWith('/showrooms/catalog'))return r.fulfill({json:{provinces:['تهران'],activityTypes:['نمایشگاه']}});
+  if(p.endsWith('/showrooms/auth/otp')){expect(r.request().postDataJSON().purpose).toBe('LOGIN');otp++;return r.fulfill({json:{challengeId:uuid}});}
+  if(p.endsWith('/showrooms/auth/verify')){signedIn=true;return r.fulfill({json:{token:'c'.repeat(64),expiresAt:new Date(Date.now()+86400000).toISOString(),user}});}
+  if(p.endsWith('/showrooms/account'))return r.fulfill({json:{...account,isActive:active}});
+  if(p.endsWith('/showrooms/mine'))return r.fulfill({json:{items:[]}});
+  return r.fulfill({json:{items:[],plans:[],banners:[]}});
+ });
+ await page.goto(root+'/hall/showrooms/mine');await expect(page).toHaveURL(root+'/hall/showrooms/login');await page.locator('.launch-splash').waitFor({state:'detached'});
+ await page.getByLabel('شماره موبایل مالک',{exact:true}).fill('09121234567');await page.getByRole('button',{name:'دریافت کد فعال‌سازی',exact:true}).click();await page.getByLabel('کد فعال‌سازی',{exact:true}).fill('123456');await page.getByRole('button',{name:'تأیید و ادامه',exact:true}).click();await expect(page).toHaveURL(root+'/hall/showrooms/mine');await expect(page.getByRole('button',{name:'نمایشگاه جدید',exact:true})).toBeVisible();
+ expect(await page.evaluate(()=>JSON.parse(localStorage.getItem('khodrochare_customer_session_v2')||'{}').token)).toBe('c'.repeat(64));await page.reload();await page.locator('.launch-splash').waitFor({state:'detached'});await expect(page.getByRole('button',{name:'نمایشگاه جدید',exact:true})).toBeVisible();expect(otp).toBe(1);
+ await page.screenshot({path:test.info().outputPath('management.png'),fullPage:true});active=false;await page.reload();await expect(page.locator('.sr-error[role=alert]')).toContainText('غیرفعال');await expect(page.getByRole('button',{name:'نمایشگاه جدید',exact:true})).toHaveCount(0);
+});
+
+test('showroom login and registration are separate and an owner session survives reload',async({page})=>{
+ const user=await session(page);let owner=false,otp=0;
+ await page.route('**/api/v1/**',r=>{const p=new URL(r.request().url()).pathname;
+  if(p.endsWith('/me'))return r.fulfill({json:user});
+  if(p.endsWith('/showrooms/account'))return r.fulfill({status:owner?200:404,json:owner?account:{error:'Not registered'}});
+  if(p.endsWith('/showrooms/catalog'))return r.fulfill({json:{provinces:['تهران'],activityTypes:['نمایشگاه']}});
+  if(p.endsWith('/showrooms/mine'))return r.fulfill({json:{items:[]}});
+  if(p.endsWith('/showrooms/auth/otp')){otp++;return r.fulfill({json:{challengeId:uuid}});}
+  return r.fulfill({json:{items:[],plans:[],banners:[]}});
+ });
+ await page.setViewportSize({width:390,height:844});
+ await page.goto(root+'/hall/showrooms/login');await page.locator('.launch-splash').waitFor({state:'detached'});
+ await expect(page.getByLabel('شماره موبایل مالک',{exact:true})).toBeVisible();await expect(page.getByLabel('نام نمایشگاه',{exact:true})).toHaveCount(0);
+ await page.getByRole('navigation',{name:'ورود و ثبت‌نام نمایشگاه'}).getByRole('link',{name:'ثبت‌نام نمایشگاه',exact:true}).click();
+ await expect(page).toHaveURL(root+'/hall/showrooms/join');await expect(page.getByLabel('نام نمایشگاه',{exact:true})).toBeVisible();
+ expect(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth)).toBe(true);
+ await page.screenshot({path:test.info().outputPath('registration-mobile.png'),fullPage:true});
+ owner=true;await page.goto(root+'/hall/showrooms/login');await expect(page).toHaveURL(root+'/hall/showrooms/mine');
+ await expect(page.getByRole('button',{name:'ویرایش اطلاعات حساب',exact:true})).toBeVisible();await page.reload();await expect(page.getByRole('button',{name:'نمایشگاه جدید',exact:true})).toBeVisible();expect(otp).toBe(0);
+ await page.screenshot({path:test.info().outputPath('owner-mobile.png'),fullPage:true});
+});
 const account={userId:'owner',name:'اتوگالری نمونه',ownerName:'مالک نمونه',activityType:'نمایشگاه',province:'تهران',city:'تهران',district:'مرکزی',landline:'02112345678',address:'تهران خیابان نمونه پلاک ۱۲',isActive:true,user:{phone:'09121234567'}};
 const showroom=()=>({id:uuid,ownerId:'owner',status:'PUBLISHED',isActive:true,version:1,draft:{name:'اتوگالری نمونه',slogan:'همراه مطمئن معامله',biography:'معرفی نمایشگاه و سابقه فعالیت در بازار خودرو',manager:{name:'مدیر نمونه',phone:'09121234567',bio:'معرفی مدیر و خدمات نمایشگاه',position:'مدیر نمایشگاه',photoId:'person'},staff:[{name:'مشاور نمونه',phone:'09120000002',position:'کارشناس خرید و فروش',bio:'همراه شما در انتخاب خودرو',photoId:'person'}]},location:account,account,photos:[{id:'shop',kind:'SHOP',url:image},{id:'shop2',kind:'SHOP',url:image},{id:'person',kind:'PERSON',url:image}],campaign:null});
 const listing=(index:number)=>({id:`listing-${index}`,status:'PUBLISHED',version:0,make:'پژو',model:'۲۰۷ '+index,trim:'پانوراما',year:1403,mileage:25000,city:'تهران',priceToman:3500000000,inspectionStatus:'NOT_INSPECTED',photos:[{id:'photo-'+index,url:image}],services:[],publishedAt:new Date().toISOString(),_count:{inquiries:0},details:{}});
@@ -26,13 +67,13 @@ test('directory opens showroom carousel, manager, advisors and real inventory',a
  await page.setViewportSize({width:390,height:844});await page.goto(root+'/hall/showrooms');await page.locator('.launch-splash').waitFor({state:'detached'});await expect(page.locator('.app-header')).toBeVisible();await expect(page.getByRole('heading',{name:'تالار خودرو',exact:true})).toBeVisible();await expect(page.getByRole('navigation',{name:'بخش‌های تالار'})).toBeVisible();await expect(page.locator('.sr-directory-card')).toHaveCount(1);await page.locator('.sr-directory-cover').click();await expect(page.getByRole('heading',{name:'تالار خودرو',exact:true})).toBeVisible();await expect(page.getByRole('heading',{name:'اتوگالری نمونه',exact:true})).toBeVisible();await expect(page.getByRole('heading',{name:'مدیر نمونه',exact:true})).toBeVisible();await expect(page.getByRole('heading',{name:'مشاور نمونه',exact:true})).toBeVisible();await expect(page.locator('.sr-inventory-card')).toHaveCount(1);await page.getByRole('button',{name:'اسلاید بعدی نمایشگاه'}).click();await expect(page.locator('.sr-hero>img')).toHaveAttribute('alt',/تصویر 2/);expect(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth)).toBe(true);await page.screenshot({path:test.info().outputPath('showroom-mobile.png'),fullPage:true});
 });
 test('owner registers by OTP, adds a showroom and submits only after captcha',async({page})=>{
- const user=await session(page),room=showroom();room.status='DRAFT';room.draft.staff=[];room.photos=[];room.draft.manager.photoId='';let submitCount=0,uploadCount=0;
+ const user=await session(page),room=showroom();room.status='DRAFT';room.draft.staff=[];room.photos=[];room.draft.manager.photoId='';let submitCount=0,uploadCount=0,registered=false;
  await page.route('**/api/v1/**',async r=>{const p=new URL(r.request().url()).pathname,method=r.request().method(),body=r.request().headers()['content-type']?.includes('json')?r.request().postDataJSON():null;
   if(p.endsWith('/me'))return r.fulfill({json:user});
   if(p.endsWith('/showrooms/catalog'))return r.fulfill({json:{provinces:['تهران'],activityTypes:['نمایشگاه','شرکت']}});
   if(p.endsWith('/showrooms/auth/otp'))return r.fulfill({json:{challengeId:uuid}});
   if(p.endsWith('/showrooms/auth/verify'))return r.fulfill({json:{token:'b'.repeat(64),expiresAt:new Date(Date.now()+86400000).toISOString(),user}});
-  if(p.endsWith('/showrooms/account'))return r.fulfill({json:account,status:method==='POST'?201:200});
+  if(p.endsWith('/showrooms/account')){if(method==='POST')registered=true;return r.fulfill({json:registered?account:{error:'Not registered'},status:registered?(method==='POST'?201:200):404});}
   if(p.endsWith('/showrooms/mine'))return r.fulfill({json:method==='POST'?room:{items:[]},status:method==='POST'?201:200});
   if(p.endsWith('/gold'))return r.fulfill({json:{campaign:null,averageCompetitorBidToman:8000}});
   if(p.endsWith('/hall/catalog'))return r.fulfill({json:{plans:[],banners:[]}});

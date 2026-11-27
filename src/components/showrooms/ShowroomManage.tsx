@@ -2,6 +2,8 @@
 "use client";
 import {useEffect,useRef,useState,type FormEvent} from 'react';
 import Link from 'next/link';
+import {useRouter} from 'next/navigation';
+import {useSessionState} from '@/lib/session';
 import {api,errorMessage,latinDigits} from '@/lib/api';
 import {HallCaptcha} from '../hall/HallCaptcha';
 import {HallWizard} from '../hall/HallWizard';
@@ -13,15 +15,19 @@ import {ShowroomGold} from './ShowroomGold';
 import {ShowroomPhotoPicker} from './ShowroomPhotoPicker';
 import {type Showroom,type ShowroomDraft,type Person,statuses} from './types';
 import './showrooms.css';
+import './showroom-owner.css';
 import '../hall/hall.css';
 const person:Person={name:'',bio:'',phone:'',position:''};
 export function ShowroomManage(){
+ const session=useSessionState(),router=useRouter();
  const [accountEdit,setAccountEdit]=useState(false);
  const [items,setItems]=useState<Showroom[]|null>(null),[selected,setSelected]=useState<Showroom|null>(null),[error,setError]=useState(''),[busy,setBusy]=useState(false),[revision,setRevision]=useState(0),[wallet,setWallet]=useState(false);const creating=useRef(false);
- useEffect(()=>{const c=new AbortController();api<{items:Showroom[]}>('/showrooms/mine',{signal:c.signal}).then(v=>setItems(v.items)).catch(e=>{if(!c.signal.aborted)setError(errorMessage(e));});return()=>c.abort();},[revision]);
+ useEffect(()=>{if(session.status==='anonymous'){router.replace('/hall/showrooms/login');return;}if(session.status!=='authenticated')return;const c=new AbortController();api<{isActive:boolean}>('/showrooms/account',{signal:c.signal}).then(profile=>{if(!profile.isActive)throw new Error('حساب نمایشگاهی شما غیرفعال است؛ با پشتیبانی تماس بگیرید.');return api<{items:Showroom[]}>('/showrooms/mine',{signal:c.signal});}).then(v=>{if(!c.signal.aborted)setItems(v.items);}).catch(e=>{if(!c.signal.aborted)setError(errorMessage(e));});return()=>c.abort();},[revision,session.status,router]);
+
  async function create(){if(creating.current)return;creating.current=true;setBusy(true);setError('');try{setSelected(await api<Showroom>('/showrooms/mine',{method:'POST',body:{}}));}catch(e){setError(errorMessage(e));}finally{setBusy(false);creating.current=false;}}
+ if(!items)return <section className="sr-page" dir="rtl"><ShowroomNav/>{error?<p className="sr-error" role="alert">{error} <Link href="/hall/showrooms/join">ثبت‌نام نمایشگاه</Link></p>:session.status==='error'?<><p role="alert">{session.error}</p><button className="sr-primary" onClick={session.retry}>تلاش دوباره</button></>:<p role="status">در حال بررسی ورود و دریافت نمایشگاه‌ها…</p>}</section>;
  if(wallet)return <section className="sr-page"><WalletPanel onBack={()=>setWallet(false)}/></section>;
- return <section className="sr-page" dir="rtl"><ShowroomNav/>{accountEdit?<ShowroomAccountEdit onClose={()=>{setAccountEdit(false);setRevision(v=>v+1);}}/>:selected?<ShowroomEditor initial={selected} onClose={()=>{setSelected(null);setRevision(v=>v+1);}} onWallet={()=>setWallet(true)}/>:<><header className="sr-heading"><h1>نمایشگاه‌های من</h1><button className="sr-primary" disabled={busy} onClick={()=>void create()}>نمایشگاه جدید</button></header>{error&&<p className="sr-error" role="alert">{error} <Link href="/hall/showrooms/join">ورود و ثبت‌نام نمایشگاه</Link></p>}{items&&!items.length&&<p className="sr-empty">با دکمه «نمایشگاه جدید» اولین نمایشگاه خود را اضافه کنید.</p>}<div className="sr-directory-grid">{items?.map(row=><article className="sr-form" key={row.id}><h2>{row.draft.name}</h2><span className="sr-status">{statuses[row.status]}</span>{row.reviewNote&&<p className="sr-error">{row.reviewNote}</p>}<div className="sr-actions"><button className="sr-primary" onClick={()=>setSelected(row)}>ویرایش و مدیریت نمایشگاه</button>{row.status==='PUBLISHED'&&<Link href={`/hall/showrooms/${row.id}`}>صفحه عمومی</Link>}</div></article>)}</div></>}</section>;
+ return <section className="sr-page" dir="rtl"><ShowroomNav/>{accountEdit?<ShowroomAccountEdit onClose={()=>{setAccountEdit(false);setRevision(v=>v+1);}}/>:selected?<ShowroomEditor initial={selected} onClose={()=>{setSelected(null);setRevision(v=>v+1);}} onWallet={()=>setWallet(true)}/>:<><header className="sr-heading"><h1>نمایشگاه‌های من</h1><button className="sr-primary" disabled={busy} onClick={()=>void create()}>نمایشگاه جدید</button></header><div className="sr-panel-tools"><button className="sr-secondary" onClick={()=>setAccountEdit(true)}>ویرایش اطلاعات حساب</button><button className="sr-secondary" onClick={()=>setWallet(true)}>کیف پول و افزایش موجودی</button></div>{error&&<p className="sr-error" role="alert">{error} <Link href="/hall/showrooms/join">ورود و ثبت‌نام نمایشگاه</Link></p>}{items&&!items.length&&<p className="sr-empty">با دکمه «نمایشگاه جدید» اولین نمایشگاه خود را اضافه کنید.</p>}<div className="sr-directory-grid">{items?.map(row=><article className="sr-form" key={row.id}><h2>{row.draft.name}</h2><span className="sr-status">{statuses[row.status]}</span>{row.reviewNote&&<p className="sr-error">{row.reviewNote}</p>}<div className="sr-actions"><button className="sr-primary" onClick={()=>setSelected(row)}>ویرایش و مدیریت نمایشگاه</button>{row.status==='PUBLISHED'&&<Link href={`/hall/showrooms/${row.id}`}>صفحه عمومی</Link>}</div></article>)}</div></>}</section>;
 }
 function ShowroomEditor({initial,onClose,onWallet}:{initial:Showroom;onClose:()=>void;onWallet:()=>void}){
  const [row,setRow]=useState(initial),[draft,setDraft]=useState<ShowroomDraft>(initial.draft),[busy,setBusy]=useState(false),[error,setError]=useState(''),[captcha,setCaptcha]=useState(false),[saved,setSaved]=useState(''),[inventory,setInventory]=useState<Listing[]>([]),[ad,setAd]=useState<Listing|null>(null),[catalog,setCatalog]=useState<Catalog|null>(null),[reload,setReload]=useState(0);
